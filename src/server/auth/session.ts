@@ -1,20 +1,56 @@
 import "server-only";
 
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { cache } from "react";
+
+import { getAuth } from "./auth";
+import { getOwnerEmail } from "./config";
+
 /** The authenticated owner. The id always comes from the server-side session, never from client input. */
 export interface OwnerContext {
   ownerId: string;
   email: string;
 }
 
+/** OwnerContext plus account details for the security settings UI. */
+export interface OwnerProfile extends OwnerContext {
+  name: string;
+  twoFactorEnabled: boolean;
+}
+
 /**
  * Returns the signed-in owner, or null when there is no valid session.
  * Used by Server Actions and Route Handlers (which answer 401 / `unauthorized`).
+ *
+ * Defense in depth: when OWNER_EMAIL is configured, a session whose user email differs is treated as signed out.
  */
 export async function getOwner(): Promise<OwnerContext | null> {
-  throw new Error("getOwner: not implemented yet (owned by the auth workstream)");
+  const profile = await getOwnerProfile();
+  return profile ? { ownerId: profile.ownerId, email: profile.email } : null;
 }
+
+/**
+ * Like getOwner(), with the display name and two-factor status.
+ * Memoized per server request (React cache), so a layout and page share one session lookup.
+ */
+export const getOwnerProfile = cache(async (): Promise<OwnerProfile | null> => {
+  const result = await getAuth().api.getSession({ headers: await headers() });
+  if (!result) return null;
+  const { user } = result;
+  const ownerEmail = getOwnerEmail();
+  if (ownerEmail && user.email.toLowerCase() !== ownerEmail) return null;
+  return {
+    ownerId: user.id,
+    email: user.email,
+    name: user.name,
+    twoFactorEnabled: user.twoFactorEnabled === true,
+  };
+});
 
 /** For pages and layouts: returns the owner or redirects to /sign-in. */
 export async function requireOwnerPage(): Promise<OwnerContext> {
-  throw new Error("requireOwnerPage: not implemented yet (owned by the auth workstream)");
+  const owner = await getOwner();
+  if (!owner) redirect("/sign-in");
+  return owner;
 }

@@ -1,26 +1,445 @@
 @import "tailwindcss";
 
+/*
+ * Tenth design tokens.
+ *
+ * Raw tokens live on :root under the names used in the design brief (--bg, --surface, --text-2, ...).
+ * Tailwind utilities are generated from them through `@theme inline` below (bg-surface, text-text-2,
+ * border-line, rounded-control, shadow-overlay, ease-out-soft, ...).
+ *
+ * WCAG 2.2 contrast, measured with a node script (relative luminance, sRGB) on the actual surfaces:
+ *
+ *   token           value     on --bg   on --surface   on --surface-raised
+ *   --text          #F1EDF8   17.10     16.06          14.94
+ *   --text-2        #B1A9C1    8.75      8.21           7.64
+ *   --text-3        #8A829B    5.40      5.07           4.71   (AA for small text on every surface)
+ *   --accent        #B8A0EA    8.69      8.16           7.59
+ *   --copper        #DFA881    9.44      8.87           8.25
+ *   --positive      #9AC7B1   10.49      9.86           9.17
+ *   --danger        #ED969F    8.89      8.35           7.76
+ *   --accent-ink on --accent   8.69     (primary button label)
+ *   --danger-ink on --danger   8.89     (danger button label)
+ *
+ * Non-text contrast (WCAG 1.4.11, needs 3:1):
+ *   --line / --line-strong are decorative dividers only (1.2–1.5:1) and never the only boundary of a control.
+ *   --line-input #6F6782 bounds inputs, selects, checkboxes: 3.70 on --bg, 3.47 on --surface, 3.23 on --surface-raised.
+ *   Focus ring (--accent, 2px, 2px offset) is 7.6–8.7:1 against every surface.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #0b0a10;
+  --surface: #14121d;
+  --surface-raised: #1c1928;
+  --surface-hover: #221f30;
+  --line: rgb(241 237 248 / 0.08);
+  --line-strong: rgb(241 237 248 / 0.14);
+  --line-input: #6f6782;
+  --text: #f1edf8;
+  --text-2: #b1a9c1;
+  --text-3: #8a829b;
+  --accent: #b8a0ea;
+  --accent-hover: #c8b5f0;
+  --accent-press: #a78fdc;
+  --accent-ink: #0b0a10;
+  --accent-wash: rgb(184 160 234 / 0.12);
+  --copper: #dfa881;
+  --copper-wash: rgb(223 168 129 / 0.12);
+  --positive: #9ac7b1;
+  --positive-wash: rgb(154 199 177 / 0.12);
+  --danger: #ed969f;
+  --danger-hover: #f2aab2;
+  --danger-ink: #0b0a10;
+  --danger-wash: rgb(237 150 159 / 0.12);
+
+  /* Motion */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 120ms;
+  --dur-reveal: 180ms;
+  --dur-amount: 500ms;
+  --dur-highlight: 1600ms;
+
+  /* Shell metrics */
+  --rail-w: 76px;
+  --topbar-h: 56px;
+  --bottomnav-h: 64px;
+  --content-max: 1320px;
+
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Only the Tenth palette is available as color utilities. */
+  --color-*: initial;
+  --color-white: #fff;
+  --color-black: #000;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-hover: var(--surface-hover);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-line-input: var(--line-input);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-press: var(--accent-press);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-wash: var(--accent-wash);
+  --color-copper: var(--copper);
+  --color-copper-wash: var(--copper-wash);
+  --color-positive: var(--positive);
+  --color-positive-wash: var(--positive-wash);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-ink: var(--danger-ink);
+  --color-danger-wash: var(--danger-wash);
+
+  /*
+   * 4px spacing base: p-1 = 4px, p-2 = 8px, p-3 = 12px, p-4 = 16px, p-5 = 20px, p-6 = 24px,
+   * p-8 = 32px, p-10 = 40px, p-14 = 56px, p-18 = 72px (the brief's scale).
+   */
+  --spacing: 0.25rem;
+
+  /* Purposeful radii */
+  --radius-chip: 6px;
+  --radius-control: 10px;
+  --radius-panel: 16px;
+  --radius-panel-lg: 20px;
+
+  /* Shadows are rare: dialogs and menus only. */
+  --shadow-overlay: 0 24px 64px -16px rgb(0 0 0 / 0.7), 0 2px 8px rgb(0 0 0 / 0.35);
+  --shadow-menu: 0 16px 40px -12px rgb(0 0 0 / 0.65), 0 1px 3px rgb(0 0 0 / 0.4);
+
+  --ease-out-soft: var(--ease-out-soft);
+  --ease-standard: var(--ease-standard);
+
+  /* Type scale (rem at 16px root) */
+  --text-overline: 0.6875rem;
+  --text-overline--letter-spacing: 0.06em;
+  --text-overline--line-height: 1rem;
+  --text-label: 0.8125rem;
+  --text-label--line-height: 1.125rem;
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.5rem;
+
+  /* Breakpoints: md = 768px (tablet), desk = 1200px (navigation rail). */
+  --breakpoint-desk: 75rem;
+
+  /* "Tenth Inter" is the shared @font-face family; --font-inter (next/font) adds the size-adjusted fallback. */
+  --font-sans: "Tenth Inter", var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --animate-reveal: tenth-reveal var(--dur-reveal) var(--ease-out-soft) both;
+  --animate-sheet-up: tenth-sheet-up 220ms var(--ease-out-soft) both;
+  --animate-toast-in: tenth-reveal var(--dur-reveal) var(--ease-out-soft) both;
+  --animate-highlight: tenth-highlight var(--dur-highlight) var(--ease-standard) both;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+
+@keyframes tenth-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@keyframes tenth-sheet-up {
+  from {
+    opacity: 0.6;
+    transform: translateY(32px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes tenth-highlight {
+  from {
+    background-color: var(--accent-wash);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+@keyframes tenth-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background-color: var(--bg);
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: 1.5;
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: rgb(184 160 234 / 0.35);
+    color: var(--text);
+  }
+
+  /* One focus language everywhere: 2px lavender ring with a 2px offset, keyboard only. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Native controls follow the dark theme (date pickers, selects, scrollbars). */
+  input,
+  select,
+  textarea,
+  button {
+    color-scheme: dark;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: 0.75;
+    cursor: pointer;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+  }
+
+  /* Clean number entry (AmountInput uses type=text + inputmode=decimal, this covers stray number inputs). */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  a {
+    color: inherit;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+    letter-spacing: -0.015em;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Scroll lock while any modal dialog is open (pure CSS, no inline styles). */
+  html:has(dialog[open]:modal) {
+    overflow: hidden;
+  }
+
+  /* Native <dialog> resets; visual styles live in the Dialog component. */
+  dialog {
+    color: var(--text);
+    background: transparent;
+    padding: 0;
+    border: 0;
+    max-width: none;
+    max-height: none;
+  }
+
+  dialog::backdrop {
+    background: rgb(5 4 9 / 0.72);
+  }
+
+  dialog[open]::backdrop {
+    animation: tenth-backdrop var(--dur-reveal) var(--ease-standard) both;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+}
+
+@keyframes tenth-backdrop {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---------- Utilities ---------- */
+
+/* Money: tabular, lining figures, optical sizing (display cut at large sizes). */
+@utility tabular {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-optical-sizing: auto;
+}
+
+@utility eyebrow {
+  font-size: var(--text-overline);
+  line-height: 1rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+/* Barely visible film grain (≤3% opacity). Decorative; sits behind content. Needs CSP img-src data:. */
+@utility noise {
+  position: relative;
+  isolation: isolate;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.028;
+    background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 160px 160px;
+  }
+}
+
+/* One soft lavender radial glow behind the hero. Never over numbers: it is a background layer. */
+@utility hero-glow {
+  background-image:
+    radial-gradient(60% 70% at 22% 38%, rgb(184 160 234 / 0.11) 0%, rgb(184 160 234 / 0.04) 45%, transparent 72%);
+  background-repeat: no-repeat;
+}
+
+/* Brief lavender wash on a newly added row; becomes a static outline with reduced motion. */
+@utility row-highlight {
+  animation: var(--animate-highlight);
+}
+
+@utility skeleton-shimmer {
+  background-color: var(--surface-raised);
+  background-image: linear-gradient(90deg, transparent 0%, rgb(241 237 248 / 0.045) 50%, transparent 100%);
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: tenth-shimmer 1.6s linear infinite;
+}
+
+@utility sr-only-focusable {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+
+  &:focus,
+  &:focus-visible {
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
+  }
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ---------- Dialog / Sheet (native <dialog>) ---------- */
+
+.tenth-dialog {
+  margin: auto;
+  width: min(100% - 32px, 560px);
+  max-height: min(100dvh - 48px, 880px);
+  border-radius: var(--radius-panel-lg);
+  background: var(--surface-raised);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-overlay);
+  overflow: hidden;
+}
+
+.tenth-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  animation: tenth-reveal var(--dur-reveal) var(--ease-out-soft) both;
+}
+
+.tenth-dialog[data-size="sm"] {
+  width: min(100% - 32px, 420px);
+}
+
+.tenth-dialog[data-size="lg"] {
+  width: min(100% - 32px, 720px);
+}
+
+/* Bottom sheet below 640px, centered dialog above. */
+@media (width < 640px) {
+  .tenth-dialog[data-variant="sheet"] {
+    margin: auto 0 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 24px);
+    border-radius: var(--radius-panel-lg) var(--radius-panel-lg) 0 0;
+    border-bottom: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .tenth-dialog[data-variant="sheet"][open] {
+    animation: tenth-sheet-up 220ms var(--ease-out-soft) both;
+  }
+}
+
+@media (width >= 640px) {
+  .tenth-dialog [data-sheet-handle] {
+    display: none;
+  }
+}
+
+/* ---------- Motion preferences ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .row-highlight {
+    animation: none !important;
+    outline: 1px solid var(--accent);
+    outline-offset: -1px;
+  }
+
+  .skeleton-shimmer {
+    animation: none !important;
+    background-image: none;
+  }
 }

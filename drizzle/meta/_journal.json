@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791006885635,
+      "tag": "0000_auth_and_rate_limit",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791007160532,
+      "tag": "0001_app_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791007182647,
+      "tag": "0002_rls_and_integrity",
+      "breakpoints": true
+    }
+  ]
+}
