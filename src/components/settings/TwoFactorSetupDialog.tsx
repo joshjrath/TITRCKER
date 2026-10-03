@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 
-import { Button, Checkbox, Dialog, InlineAlert, useToast } from "@/components/ui";
+import { Button, Checkbox, Dialog, useToast } from "@/components/ui";
 import { startTwoFactorEnrollment, type TwoFactorEnrollment } from "@/server/actions/two-factor";
 
 import { BackupCodesPanel } from "./BackupCodesPanel";
@@ -97,8 +97,7 @@ export function TwoFactorSetupDialog({ open, onClose, account, today }: TwoFacto
       ) : null}
       {step === "verify" ? <VerifyStep formId={formId} state={verify} /> : null}
       {step === "done" ? (
-        <div className="flex flex-col gap-3 text-[0.9375rem] text-text-2">
-          <InlineAlert tone="success">Two-factor authentication is on.</InlineAlert>
+        <div className="text-[0.9375rem] text-text-2">
           <p>Next time you sign in, Tenth asks for a code from your authenticator app after your password. Lost your phone? Use one of your backup codes.</p>
         </div>
       ) : null}

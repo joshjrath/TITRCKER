@@ -43,7 +43,7 @@ export function ScanStep({ enrollment }: { enrollment: TwoFactorEnrollment }) {
         {secret ? (
           <div className="flex flex-col gap-2">
             <p className="text-label text-text-2">Can&apos;t scan it? Type this setup key instead:</p>
-            <code className="select-all break-all rounded-control border border-line bg-bg/60 px-3 py-2 font-mono text-[0.9375rem] tracking-[0.06em] text-text">
+            <code className="select-all break-words rounded-control border border-line bg-bg/60 px-3 py-2 font-mono text-[0.9375rem] tracking-[0.06em] text-text">
               {groupSecret(secret)}
             </code>
             <div className="flex flex-wrap items-center gap-2">
