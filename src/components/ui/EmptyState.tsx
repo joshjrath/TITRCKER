@@ -15,12 +15,25 @@ export interface EmptyStateProps {
   className?: string;
 }
 
-/** Faint ring + tenth arc, no motion. Decorative. */
+/**
+ * The orbit, drawn faintly with nothing on it yet: a thin elliptical sweep rising toward a muted
+ * copper payout node — the same line language as the overview's OrbitalArc (variant "empty").
+ * Static and decorative. (A ring with a short arc read as a loading spinner, so it is not used here.)
+ */
 export function EmptyArc({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 120 120" width="120" height="120" fill="none" aria-hidden="true" focusable="false" className={className}>
-      <circle cx="60" cy="60" r="48" stroke="var(--accent)" strokeOpacity="0.22" strokeWidth="1.25" />
-      <path d="M60 12 A48 48 0 0 1 88.21 21.17" stroke="var(--accent)" strokeOpacity="0.75" strokeWidth="1.5" strokeLinecap="round" />
+      <path
+        d="M10 108 A 76 92 0 0 1 104 46"
+        stroke="var(--accent)"
+        strokeOpacity="0.32"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
+      <circle cx="10" cy="108" r="2" fill="var(--accent)" fillOpacity="0.45" />
+      <circle cx="104" cy="46" r="5.5" stroke="var(--copper)" strokeOpacity="0.4" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+      <circle cx="104" cy="46" r="2.25" fill="var(--copper)" fillOpacity="0.6" />
     </svg>
   );
 }

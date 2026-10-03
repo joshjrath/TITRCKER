@@ -4,7 +4,7 @@ export const controlBase =
   "transition-[border-color,background-color] duration-[var(--dur-fast)] " +
   "hover:border-[#857c99] focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent " +
   "aria-invalid:border-danger aria-invalid:hover:border-danger " +
-  "disabled:cursor-not-allowed disabled:opacity-50 read-only:bg-surface";
+  "disabled:cursor-not-allowed disabled:opacity-50 [&:is(input,textarea):read-only]:bg-surface";
 
 export const controlSize = {
   sm: "h-11 px-3 text-[0.9375rem] md:h-9 md:text-label",

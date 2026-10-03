@@ -46,7 +46,7 @@ export function SegmentedControl<T extends string>({
   const groupName = name ?? `seg${autoId}`;
   const labelId = `${groupName}-label`;
   return (
-    <div className={cn("inline-flex flex-col gap-1.5", fullWidth && "w-full", className)}>
+    <div className={cn("inline-flex flex-col gap-1.5", fullWidth ? "w-full" : "w-fit max-w-full", className)}>
       <span id={labelId} className={hideLabel ? "sr-only" : "text-label font-medium text-text-2"}>
         {label}
       </span>
@@ -66,10 +66,13 @@ export function SegmentedControl<T extends string>({
               key={o.value}
               className={cn(
                 "relative flex cursor-pointer select-none items-center justify-center rounded-[7px] font-medium",
+                /* Hit area reaches the group's outer edge (3px padding + 1px border), so md is a full 44px target. */
+                "before:absolute before:inset-x-0 before:-inset-y-1 before:content-['']",
                 "transition-colors duration-[var(--dur-fast)]",
                 "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-1 has-[:focus-visible]:outline-accent",
                 "has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50",
-                size === "sm" ? "h-10 min-w-11 px-3 text-label md:h-8" : "h-10 min-w-12 px-3.5 text-label md:h-9",
+                /* Group heights match the other controls: md 44px everywhere; sm 44px on phones, 36px from md up. */
+                size === "sm" ? "h-9 min-w-11 px-3 text-label md:h-7" : "h-9 min-w-12 px-3.5 text-label",
                 fullWidth && "flex-1",
                 checked
                   ? "bg-surface-hover text-text shadow-[inset_0_0_0_1px_var(--line-input)]"

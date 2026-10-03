@@ -2,14 +2,14 @@ import "server-only";
 
 import { CURRENCIES, setAsideHistory } from "@/domain";
 import type { SetAsideVM } from "@/lib/view-models";
-import { withOwner } from "@/server/db/with-owner";
+import { withOwnerSnapshot } from "@/server/db/with-owner";
 import type { ServiceContext } from "@/server/services/context";
 
 import { loadComputedLedgerTx } from "./common";
 
 /** The Set aside page: balance, still to set aside and the chronological history (oldest first) per currency. */
 export async function getSetAside(ctx: ServiceContext): Promise<SetAsideVM> {
-  const { today, settings, snapshot, balances } = await withOwner(ctx.ownerId, (tx) => loadComputedLedgerTx(tx, ctx));
+  const { today, settings, snapshot, balances } = await withOwnerSnapshot(ctx.ownerId, (tx) => loadComputedLedgerTx(tx, ctx));
   return {
     today,
     settings,

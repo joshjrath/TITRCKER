@@ -3,6 +3,8 @@ import { buildBackupExport } from "@/server/read-models/export";
 
 import { attachment, authorizeExport, exportFailed, PRIVATE_DOWNLOAD_HEADERS } from "../shared";
 
+export const dynamic = "force-dynamic";
+
 /** GET /api/export/backup — JSON backup (full history incl. deleted/reversed records and the audit trail). */
 export async function GET(): Promise<Response> {
   const auth = await authorizeExport();

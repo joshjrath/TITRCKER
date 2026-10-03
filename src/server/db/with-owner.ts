@@ -1,6 +1,6 @@
 import "server-only";
 
-import { eq, sql } from "drizzle-orm";
+import { DrizzleQueryError, eq, sql } from "drizzle-orm";
 
 import {
   DEFAULT_CURRENCY,
@@ -35,6 +35,44 @@ export async function withOwner<T>(ownerId: string, fn: (tx: OwnerTx) => Promise
     await tx.execute(sql`SELECT set_config('app.owner_id', ${ownerId}, true)`);
     return fn(tx);
   });
+}
+
+/** How often a snapshot read is retried after a serialization failure (rare; see withOwnerSnapshot). */
+const SNAPSHOT_ATTEMPTS = 3;
+
+function isSerializationFailure(err: unknown): boolean {
+  const cause: unknown = err instanceof DrizzleQueryError ? err.cause : err;
+  return typeof cause === "object" && cause !== null && (cause as { code?: unknown }).code === "40001";
+}
+
+/**
+ * Like {@link withOwner}, but the whole transaction reads ONE snapshot (`REPEATABLE READ`). Read models and exports
+ * use it: they issue several SELECTs (settings, incomes, adjustments, payments, allocations, set-asides, history), and
+ * under the default READ COMMITTED each statement could see a different set of committed writes, so totals could
+ * disagree with the records listed beside them (e.g. a backup whose balances omit a payment its records include).
+ *
+ * Financial MUTATIONS must keep using {@link withOwnerLocked} (READ COMMITTED): their reads have to see everything
+ * committed before they acquired the settings lock, which a snapshot taken before the lock would not.
+ *
+ * The only write a read may do is creating the owner's default settings row on first use; if a concurrent
+ * transaction created it first, Postgres reports a serialization failure and the read is retried.
+ */
+export async function withOwnerSnapshot<T>(ownerId: string, fn: (tx: OwnerTx) => Promise<T>): Promise<T> {
+  assertOwnerId(ownerId);
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await getDb().transaction(
+        async (tx) => {
+          await tx.execute(sql`SELECT set_config('app.owner_id', ${ownerId}, true)`);
+          return fn(tx);
+        },
+        { isolationLevel: "repeatable read" },
+      );
+    } catch (err) {
+      if (attempt < SNAPSHOT_ATTEMPTS && isSerializationFailure(err)) continue;
+      throw err;
+    }
+  }
 }
 
 /** Default settings for a new owner, from the domain constants. */

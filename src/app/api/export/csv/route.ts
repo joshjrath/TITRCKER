@@ -3,6 +3,8 @@ import { buildCsvExport } from "@/server/read-models/export";
 
 import { attachment, authorizeExport, exportFailed, PRIVATE_DOWNLOAD_HEADERS } from "../shared";
 
+export const dynamic = "force-dynamic";
+
 /** GET /api/export/csv — full reconciliation CSV of the signed-in owner's ledger (UTF-8 with BOM for Excel). */
 export async function GET(): Promise<Response> {
   const auth = await authorizeExport();

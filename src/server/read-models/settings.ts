@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 
 import type { OpeningVM, SettingsPageVM } from "@/lib/view-models";
 import { user } from "@/server/db/schema";
-import { withOwner, type OwnerTx } from "@/server/db/with-owner";
+import { withOwnerSnapshot, type OwnerTx } from "@/server/db/with-owner";
 import type { ServiceContext } from "@/server/services/context";
 import { earliestActiveIncomeDate } from "@/server/services/income";
 import { loadOwnerLedgerTx } from "@/server/services/snapshot";
@@ -34,7 +34,7 @@ export async function loadAccount(tx: OwnerTx, ownerId: string): Promise<{ email
 
 /** The Settings page: settings, active opening balances, account security state and the time zone list. */
 export async function getSettingsPage(ctx: ServiceContext): Promise<SettingsPageVM> {
-  return withOwner(ctx.ownerId, async (tx) => {
+  return withOwnerSnapshot(ctx.ownerId, async (tx) => {
     const ledger = await loadOwnerLedgerTx(tx, ctx);
     const account = await loadAccount(tx, ctx.ownerId);
     const openings: OpeningVM[] = ledger.snapshot.openings.map((o) => ({

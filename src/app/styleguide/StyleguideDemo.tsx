@@ -53,6 +53,17 @@ function Section({ id, title, children, note }: { id: string; title: string; chi
   );
 }
 
+/** Specimen row: a fixed label column, items wrap inside their own column (never under the label). */
+function Specimen({ label, align = "center", children }: { label: string; align?: "center" | "baseline"; children: ReactNode }) {
+  return (
+    <div className={`grid grid-cols-[3rem_minmax(0,1fr)] gap-x-4 sm:grid-cols-[5.5rem_minmax(0,1fr)] ${align === "baseline" ? "items-baseline" : "items-start"}`}>
+      {/* Centre rows: the label lines up with the first row of items even when they wrap. */}
+      <span className={`text-xs text-text-3 ${align === "center" ? "flex min-h-12 items-center" : ""}`}>{label}</span>
+      <div className={`flex flex-wrap gap-x-6 gap-y-3 ${align === "baseline" ? "items-baseline" : "items-center"}`}>{children}</div>
+    </div>
+  );
+}
+
 const SWATCHES: { name: string; className: string; note: string }[] = [
   { name: "--bg", className: "bg-bg", note: "#0B0A10" },
   { name: "--surface", className: "bg-surface", note: "#14121D" },
@@ -96,13 +107,13 @@ export function StyleguideDemo() {
         eyebrow="Sample"
         title="Overview"
         periodSlot={
-          <Select aria-label="Period" value={period} onChange={(e) => setPeriod(e.target.value)} size="sm" wrapperClassName="md:w-56">
+          <Select aria-label="Period" value={period} onChange={(e) => setPeriod(e.target.value)} wrapperClassName="md:w-56">
             <option value="2026">Oct 3 – Dec 31, 2026</option>
             <option value="2025">Jan 1 – Dec 31, 2025</option>
             <option value="all">All time</option>
           </Select>
         }
-        currencySlot={<CurrencyToggle value={currency} onChange={setCurrency} name="sg-header-currency" />}
+        currencySlot={<CurrencyToggle value={currency} onChange={setCurrency} name="sg-header-currency" size="md" />}
         actionSlot={
           <Button leadingIcon={<Plus aria-hidden="true" className="size-4" />} onClick={() => toast({ title: "Sample: Add income pressed", variant: "info" })}>
             Add income
@@ -175,16 +186,17 @@ export function StyleguideDemo() {
         <Section id="sg-amount" title="Amount" note="Minor units → splitMinor; currency code always visible">
           <div className="flex flex-col gap-5">
             {(["xs", "sm", "md", "lg", "xl"] as const).map((size) => (
-              <div key={size} className="flex flex-wrap items-baseline gap-x-8 gap-y-2">
-                <span className="w-10 text-xs text-text-3">{size}</span>
+              <Specimen key={size} label={size} align="baseline">
                 <Amount minor={175_000} currency="CAD" size={size} />
                 <Amount minor={-2_500} currency="USD" size={size} tone="danger" />
                 <Amount minor={4_000} currency="CAD" size={size} sign="always" tone="positive" />
-              </div>
+              </Specimen>
             ))}
-            <div className="flex flex-wrap items-baseline gap-x-8">
-              <span className="w-10 text-xs text-text-3">hero</span>
-              <Amount minor={1_234_567} currency="USD" size="hero" />
+            <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[5.5rem_minmax(0,1fr)] sm:items-baseline sm:gap-x-4">
+              <span className="text-xs text-text-3">hero</span>
+              <div className="min-w-0">
+                <Amount minor={1_234_567} currency="USD" size="hero" />
+              </div>
             </div>
           </div>
         </Section>
@@ -192,8 +204,7 @@ export function StyleguideDemo() {
         <Section id="sg-buttons" title="Buttons">
           <div className="flex flex-col gap-4">
             {(["primary", "secondary", "ghost", "danger"] as const).map((variant) => (
-              <div key={variant} className="flex flex-wrap items-center gap-3">
-                <span className="w-20 text-xs text-text-3">{variant}</span>
+              <Specimen key={variant} label={variant}>
                 <Button variant={variant} size="sm">
                   Small
                 </Button>
@@ -204,10 +215,9 @@ export function StyleguideDemo() {
                 <Button variant={variant} disabled>
                   Disabled
                 </Button>
-              </div>
+              </Specimen>
             ))}
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="w-20 text-xs text-text-3">loading</span>
+            <Specimen label="loading">
               <Button
                 loading={loading}
                 loadingLabel="Saving…"
@@ -222,17 +232,16 @@ export function StyleguideDemo() {
                 Working
               </Button>
               <Spinner label="Loading sample" />
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="w-20 text-xs text-text-3">icon</span>
+            </Specimen>
+            <Specimen label="icon">
               <IconButton aria-label="Edit sample entry" icon={<Pencil />} />
               <IconButton aria-label="Copy sample" icon={<Copy />} variant="secondary" />
               <IconButton aria-label="Add sample" icon={<Plus />} variant="primary" />
               <IconButton aria-label="Delete sample" icon={<Trash2 />} variant="danger" size="sm" />
-              <span className="ml-3 text-label text-text-2">
+              <span className="text-label text-text-2">
                 Shortcut <Kbd>N</Kbd> <Kbd>Esc</Kbd>
               </span>
-            </div>
+            </Specimen>
           </div>
         </Section>
 

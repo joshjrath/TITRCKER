@@ -26,7 +26,7 @@ const baseSettings = {
   expectedVersion: 1,
   trackingStart: "2026-10-03",
   timeZone: "America/Toronto",
-  displayCurrency: "CAD" as const,
+  displayCurrency: "CAD" as "CAD" | "USD",
   churchName: null as string | null,
   nextPayoutDate: "2026-12-31",
 };
@@ -83,8 +83,8 @@ describe("settings updates", () => {
   });
 
   it("uses today in the NEW time zone", async () => {
-    // 2026-10-11 05:30Z: still Oct 10 in Toronto, already Oct 11 in Auckland.
-    const now = new Date("2026-10-11T05:30:00Z");
+    // 2026-10-11 01:00Z: still Oct 10 (21:00) in Toronto, already Oct 11 in Auckland.
+    const now = new Date("2026-10-11T01:00:00Z");
     await expectServiceError(save({ nextPayoutDate: "2026-10-10", timeZone: "Pacific/Auckland" }, now), "validation", "nextPayoutDate");
     await expect(save({ nextPayoutDate: "2026-10-10" }, now)).resolves.toMatchObject({ nextPayoutDate: "2026-10-10" });
   });

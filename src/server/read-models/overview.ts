@@ -16,7 +16,7 @@ import {
   type PeriodRange,
 } from "@/domain";
 import type { OverviewVM, PeriodOptionVM, PeriodProgressVM } from "@/lib/view-models";
-import { withOwner } from "@/server/db/with-owner";
+import { withOwnerSnapshot } from "@/server/db/with-owner";
 import type { ServiceContext } from "@/server/services/context";
 
 import { categoriesOf, currencyParam, headlinesFrom, incomeRowVM, isEmptySnapshot, loadComputedLedgerTx } from "./common";
@@ -60,7 +60,7 @@ export function periodProgressFor(range: PeriodRange, today: LocalDate): PeriodP
 
 /** The Overview page: headline balances, the selected period and currency, payout status, charts and recent rows. */
 export async function getOverview(ctx: ServiceContext, params: OverviewParams = {}): Promise<OverviewVM> {
-  const ledger = await withOwner(ctx.ownerId, (tx) => loadComputedLedgerTx(tx, ctx));
+  const ledger = await withOwnerSnapshot(ctx.ownerId, (tx) => loadComputedLedgerTx(tx, ctx));
   const { snapshot, tracking, today, balances, events, settings } = ledger;
 
   const currency = currencyParam(params.currency, tracking.displayCurrency);

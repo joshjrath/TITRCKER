@@ -12,10 +12,18 @@ export interface OrbitGeometry extends Ellipse {
 }
 
 /**
- * Default framing: rises from just above/right of the hero figure (so it never crosses the digits),
- * crests near the top edge and descends to the payout node on the right.
+ * Default (desktop, >=1200px) framing over the whole hero + year-end surface. It starts at about
+ * (35%, 16%) — above the top of the hero digits even for long amounts such as "12,345.67 CAD" —
+ * crests near the top edge and descends to the payout node at the right (95%, 67%).
  */
-export const DEFAULT_ORBIT: OrbitGeometry = { cx: 52, cy: 96, rx: 46, ry: 86, startDeg: 236, endDeg: 340 };
+export const DEFAULT_ORBIT: OrbitGeometry = { cx: 52, cy: 96, rx: 46, ry: 86, startDeg: 248, endDeg: 340 };
+
+/**
+ * Compact (<1200px) framing, drawn in a short band across the top of the container
+ * (`--orbit-band`, default 48px, offset `--orbit-band-top`, default 12px): a shallow dome from (46%, bottom of band) over (72%, 10%) to the
+ * payout node at (95%, 71%). It stays above the hero digits in single-column layouts.
+ */
+export const COMPACT_ORBIT: OrbitGeometry = { cx: 72, cy: 153, rx: 28, ry: 143, startDeg: 202, endDeg: 325 };
 
 const DEG = Math.PI / 180;
 

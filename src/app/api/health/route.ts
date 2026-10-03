@@ -1,8 +1,10 @@
-import { connection } from "next/server";
 import { sql } from "drizzle-orm";
 
 import { getDb } from "@/server/db/client";
 import { logEvent } from "@/server/log";
+
+/** Never prerender at build time (there is no database there); always check per request. */
+export const dynamic = "force-dynamic";
 
 const HEADERS = {
   "Cache-Control": "no-store",
@@ -12,7 +14,6 @@ const HEADERS = {
 
 /** GET /api/health — liveness + database reachability for Render. Returns no data. */
 export async function GET(): Promise<Response> {
-  await connection(); // never prerender at build time (no database there)
   try {
     await getDb().execute(sql`SELECT 1`);
     return new Response(JSON.stringify({ status: "ok" }), { status: 200, headers: HEADERS });

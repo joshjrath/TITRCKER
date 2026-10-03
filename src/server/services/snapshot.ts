@@ -19,7 +19,7 @@ import {
   paymentAllocation,
   setAsideEntry,
 } from "@/server/db/schema";
-import { readSettingsRow, withOwner, type AppSettingsRow, type OwnerTx } from "@/server/db/with-owner";
+import { readSettingsRow, withOwnerSnapshot, type AppSettingsRow, type OwnerTx } from "@/server/db/with-owner";
 
 import type { ServiceContext } from "./context";
 import {
@@ -124,7 +124,7 @@ export async function loadOwnerLedgerTx(tx: OwnerTx, ctx: ServiceContext): Promi
 
 /** For read models: settings + active snapshot for the session owner. */
 export async function loadOwnerLedger(ctx: ServiceContext): Promise<OwnerLedger> {
-  return withOwner(ctx.ownerId, (tx) => loadOwnerLedgerTx(tx, ctx));
+  return withOwnerSnapshot(ctx.ownerId, (tx) => loadOwnerLedgerTx(tx, ctx));
 }
 
 export interface FullHistory {

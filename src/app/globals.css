@@ -201,7 +201,17 @@
     color: var(--text);
   }
 
-  /* One focus language everywhere: 2px lavender ring with a 2px offset, keyboard only. */
+  /*
+   * One focus language everywhere: 2px lavender ring with a 2px offset, keyboard only.
+   * outline-color is lavender at rest too, so utilities that transition colours (transition-colors
+   * includes outline-color) don't fade the ring in from currentColor: it appears at full strength.
+   */
+  *,
+  ::before,
+  ::after {
+    outline-color: var(--accent);
+  }
+
   :focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;

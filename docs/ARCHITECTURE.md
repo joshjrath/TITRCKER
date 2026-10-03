@@ -183,6 +183,8 @@ All private tables carry `owner_id text not null references "user"(id) on delete
 row-level security with policy `owner_id = current_setting('app.owner_id', true)`, and are only accessed through
 `withOwner(ownerId, fn)`. That helper opens a transaction and runs `set_config('app.owner_id', ownerId, true)`. Every
 query still filters by `owner_id` explicitly, so ownership is checked in the application and again in the database.
+Read models and exports use `withOwnerSnapshot(ownerId, fn)`, the same helper at `REPEATABLE READ`, so every page and
+export is computed from one consistent snapshot (totals always match the records shown beside them).
 `audit_event` allows only SELECT and INSERT for the app role (append-only).
 
 | Table | Key columns / constraints |

@@ -5,7 +5,7 @@ import { and, desc, eq, isNotNull } from "drizzle-orm";
 import { computePayoutStatus, CURRENCIES, subMinor, sumMinor, toMinor, type BucketPosition, type Currency } from "@/domain";
 import type { GivenVM, PaymentVM } from "@/lib/view-models";
 import { churchPayment, paymentAllocation, setAsideEntry } from "@/server/db/schema";
-import { withOwner, type OwnerTx } from "@/server/db/with-owner";
+import { withOwnerSnapshot, type OwnerTx } from "@/server/db/with-owner";
 import type { ServiceContext } from "@/server/services/context";
 import { groupAllocations, isoOrNull, paymentRecordFromRow, type PaymentRow, type SetAsideRow } from "@/server/services/records";
 
@@ -70,7 +70,7 @@ export async function loadPaymentVMs(tx: OwnerTx, ownerId: string): Promise<Paym
 
 /** The Given page: payout status, balances and outstanding buckets per currency, and the payment history. */
 export async function getGiven(ctx: ServiceContext, params: GivenParams = {}): Promise<GivenVM> {
-  return withOwner(ctx.ownerId, async (tx) => {
+  return withOwnerSnapshot(ctx.ownerId, async (tx) => {
     const ledger = await loadComputedLedgerTx(tx, ctx);
     const payments = await loadPaymentVMs(tx, ctx.ownerId);
     const bucketsByCurrency = Object.fromEntries(

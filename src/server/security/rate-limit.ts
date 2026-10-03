@@ -16,6 +16,8 @@ export const RATE_LIMITS = {
   mutation: { max: 60, windowSeconds: 60 },
   export: { max: 10, windowSeconds: 300 },
   setup: { max: 5, windowSeconds: 900 },
+  /** Deployment-wide ceiling on /setup attempts (independent of the spoofable client IP). */
+  setupGlobal: { max: 30, windowSeconds: 900 },
   /** Password-confirmed security actions (2FA enrollment/disable, backup codes, password change). */
   security: { max: 10, windowSeconds: 900 },
 } as const satisfies Record<string, RateLimitRule>;

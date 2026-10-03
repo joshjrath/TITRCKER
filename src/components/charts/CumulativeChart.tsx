@@ -281,8 +281,9 @@ export function CumulativeChart({
             const bx = Math.round(x0 + b * (x1 - x0)) + 0.5;
             return <line key={b} x1={bx} x2={bx} y1={yBottom} y2={yBottom + 5} className={styles.axis} />;
           })}
+          {/* Full month names where there is room, single letters on narrow tracks (a year at 390px). */}
           {segments.map((m) =>
-            (m.end - m.start) * (x1 - x0) >= 26 ? (
+            (m.end - m.start) * (x1 - x0) >= 12 ? (
               <text
                 key={m.key}
                 x={x0 + m.center * (x1 - x0)}

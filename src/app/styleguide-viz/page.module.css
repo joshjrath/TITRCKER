@@ -73,11 +73,11 @@
 
 .split {
   display: grid;
-  align-items: start;
+  align-items: stretch;
   gap: 16px;
 }
 
-@media (min-width: 1100px) {
+@media (min-width: 1200px) {
   .split {
     grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
   }
@@ -102,7 +102,7 @@
     var(--surface, #14121d);
 }
 
-@media (min-width: 1100px) {
+@media (min-width: 1200px) {
   .composition {
     grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
     gap: 48px;
@@ -124,7 +124,7 @@
   align-self: end;
 }
 
-@media (min-width: 1100px) {
+@media (min-width: 1200px) {
   .yearEnd {
     padding-left: 32px;
     border-left: 1px solid var(--line, rgb(241 237 248 / 0.08));

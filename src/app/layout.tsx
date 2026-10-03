@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import localFont from "next/font/local";
+import { connection } from "next/server";
 import { ToastProvider } from "@/components/ui/Toast";
 import "./globals.css";
 
@@ -67,7 +68,11 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+  // Render every route per request: the CSP (src/proxy.ts) uses a per-request nonce, which Next.js can only stamp
+  // on scripts of dynamically rendered pages. A prerendered page (including /_not-found) would have all its
+  // scripts blocked by the CSP.
+  await connection();
   return (
     <html lang="en-CA" className={`${interLatin.variable} ${interLatinExt.variable}`}>
       <body className="min-h-dvh bg-bg text-text antialiased">

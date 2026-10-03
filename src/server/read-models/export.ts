@@ -1,7 +1,7 @@
 import "server-only";
 
 import { backupFileName, buildBackup, buildLedgerCsv, type BackupV1 } from "@/domain";
-import { withOwner } from "@/server/db/with-owner";
+import { withOwnerSnapshot } from "@/server/db/with-owner";
 import type { ServiceContext } from "@/server/services/context";
 import { loadFullHistory } from "@/server/services/snapshot";
 
@@ -26,7 +26,7 @@ export function ledgerCsvFileName(today: string): string {
 
 /** Full reconciliation CSV of the owner's active records (domain buildLedgerCsv), with summary rows per currency. */
 export async function buildCsvExport(ctx: ServiceContext): Promise<CsvExport> {
-  const ledger = await withOwner(ctx.ownerId, (tx) => loadComputedLedgerTx(tx, ctx));
+  const ledger = await withOwnerSnapshot(ctx.ownerId, (tx) => loadComputedLedgerTx(tx, ctx));
   const body = buildLedgerCsv(
     ledger.snapshot,
     ledger.balances,
@@ -41,7 +41,7 @@ export async function buildCsvExport(ctx: ServiceContext): Promise<CsvExport> {
  * from the active records only. Read in one owner-scoped transaction so it is a consistent snapshot.
  */
 export async function buildBackupExport(ctx: ServiceContext): Promise<BackupExport> {
-  return withOwner(ctx.ownerId, async (tx) => {
+  return withOwnerSnapshot(ctx.ownerId, async (tx) => {
     const ledger = await loadComputedLedgerTx(tx, ctx);
     const history = await loadFullHistory(tx, ctx.ownerId);
     const account = await loadAccount(tx, ctx.ownerId);

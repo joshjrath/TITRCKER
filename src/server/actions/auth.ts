@@ -28,9 +28,12 @@ export async function setupOwnerAction(input: OwnerSetupInput): Promise<ActionRe
     return { ok: false, code: "not_found", message: "Setup is not available." };
   }
 
+  // Per IP, plus a deployment-wide ceiling: the client IP comes from a spoofable header (see client-ip.ts).
   const ip = requestClientIp(await headers());
   const limit = await checkRateLimit(`setup:${ip}`, RATE_LIMITS.setup);
   if (!limit.ok) return rateLimitedResult(limit.retryAfterSeconds);
+  const globalLimit = await checkRateLimit("setup-global:all", RATE_LIMITS.setupGlobal);
+  if (!globalLimit.ok) return rateLimitedResult(globalLimit.retryAfterSeconds);
 
   const parsed = ownerSetupSchema.safeParse(input);
   if (!parsed.success) {

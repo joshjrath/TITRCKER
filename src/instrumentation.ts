@@ -2,7 +2,8 @@ import type { Instrumentation } from "next";
 
 /**
  * Runs once when a server instance starts (never during `next build`).
- * Production: refuse to start with a broken environment, and warn loudly if the test clock override is enabled.
+ * Production: redact database errors from console output, refuse to start with a broken environment, and warn
+ * loudly if the test clock override is enabled.
  */
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
@@ -10,6 +11,10 @@ export async function register(): Promise<void> {
   const { logEvent } = await import("@/server/log");
 
   if (process.env.NODE_ENV !== "production") return;
+
+  // Errors that escape to the framework are printed by Next.js; strip SQL parameters / row data from them first.
+  const { installLogRedaction } = await import("@/server/security/log-redaction");
+  installLogRedaction();
 
   if (isTestModeEnabled()) {
     logEvent("warn", "startup.test_mode_enabled", {

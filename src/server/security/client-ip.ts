@@ -6,9 +6,10 @@
  * The proxy (src/proxy.ts) resolves it once per request and forwards it upstream in CLIENT_IP_HEADER, overwriting
  * any value the client sent, so Better Auth and our own limiter key on the same address.
  *
- * Caveat: the first X-Forwarded-For hop is only as trustworthy as the edge in front of the app. Behind Render it
- * is set by Render; if the app were exposed directly, a client could choose its own key. Limits are a brute-force
- * brake, not an authentication control (passwords are scrypt-hashed and 2FA has its own account lockout).
+ * Caveat: Render's edge APPENDS to a client-supplied X-Forwarded-For rather than replacing it, so the first hop can
+ * be chosen by the client. Per-IP limits are therefore a convenience for honest clients only; every credential
+ * endpoint also has a deployment-wide limit that ignores the IP (src/server/security/auth-brake.ts, setup-global),
+ * and 2FA has its own account lockout. Limits are a brute-force brake, not an authentication control.
  */
 
 /** Request header carrying the resolved client IP from the proxy to route handlers, pages and actions. */

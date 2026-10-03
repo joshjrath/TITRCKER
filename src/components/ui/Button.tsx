@@ -11,10 +11,15 @@ const base =
   "disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed";
 
 const variants: Record<ButtonVariant, string> = {
-  primary: "bg-accent text-accent-ink hover:bg-accent-hover active:bg-accent-press",
+  /* Disabled filled buttons drop to a neutral raised fill instead of a muddy half-transparent tint. */
+  primary:
+    "bg-accent text-accent-ink hover:bg-accent-hover active:bg-accent-press " +
+    "disabled:border disabled:border-line disabled:bg-surface-raised disabled:text-text-3 disabled:opacity-100",
   secondary: "border border-line-strong bg-surface-raised text-text hover:bg-surface-hover hover:border-line-input",
   ghost: "text-text-2 hover:bg-surface-raised hover:text-text",
-  danger: "bg-danger text-danger-ink hover:bg-danger-hover",
+  danger:
+    "bg-danger text-danger-ink hover:bg-danger-hover " +
+    "disabled:border disabled:border-line disabled:bg-surface-raised disabled:text-text-3 disabled:opacity-100",
 };
 
 /* 44px minimum touch target below md; compact sizes only on pointer-precise layouts. */
