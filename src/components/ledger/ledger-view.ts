@@ -135,8 +135,10 @@ export function hasActiveFilters(view: LedgerViewState): boolean {
   return view.query.trim() !== "" || view.from !== "" || view.to !== "" || view.currency !== "all";
 }
 
+export type CurrencyTotals = LedgerTotals & { currency: Currency };
+
 /** Totals of the selection per currency that has entries in it (never mixed). */
-export function selectionTotals(ledgerRows: readonly LedgerRow[]): (LedgerTotals & { currency: Currency })[] {
+export function selectionTotals(ledgerRows: readonly LedgerRow[]): CurrencyTotals[] {
   const totals = totalsByCurrency(ledgerRows);
   return CURRENCIES.filter((c) => totals[c].count > 0).map((currency) => ({ currency, ...totals[currency] }));
 }
