@@ -53,6 +53,14 @@ describe("settings updates", () => {
   it("validates the time zone", async () => {
     await expectServiceError(save({ timeZone: "Mars/Olympus" }), "validation", "timeZone");
     await expectServiceError(save({ timeZone: "" }), "validation", "timeZone");
+    await expectServiceError(save({ timeZone: "+05:00" }), "validation", "timeZone");
+  });
+
+  it("stores the canonical IANA name for the time zone", async () => {
+    const lower = await save({ timeZone: "america/toronto" });
+    expect(lower.timeZone).toBe("America/Toronto");
+    const alias = await save({ timeZone: "US/Eastern", expectedVersion: lower.version });
+    expect(alias.timeZone).toBe("America/New_York");
   });
 
   it("tracking start must be <= today and <= the earliest active income", async () => {

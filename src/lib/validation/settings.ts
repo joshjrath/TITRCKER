@@ -15,7 +15,9 @@ export const timeZoneField = z
   .string({ error: "Choose a time zone." })
   .trim()
   .max(TEXT_LIMITS.timeZone, { error: "Choose a time zone from the list." })
-  .refine((tz) => isValidTimeZone(tz), { error: "Choose a time zone from the list." });
+  .refine((tz) => isValidTimeZone(tz), { error: "Choose a time zone from the list." })
+  // Store the canonical IANA name ("america/toronto" -> "America/Toronto", "US/Eastern" -> "America/New_York").
+  .transform((tz) => new Intl.DateTimeFormat("en-US", { timeZone: tz }).resolvedOptions().timeZone);
 
 export const settingsUpdateSchema = z.object({
   idempotencyKey: idempotencyKeyField,

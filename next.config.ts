@@ -18,6 +18,8 @@ const securityHeaders: { key: string; value: string }[] = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  // The floating dev badge covers the navigation rail's sign-out control; compile/runtime errors still surface.
+  devIndicators: false,
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
