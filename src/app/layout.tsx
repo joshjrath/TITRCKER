@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import localFont from "next/font/local";
+import { cookies } from "next/headers";
 import { connection } from "next/server";
+import { PRIVACY_COOKIE, privacyFromCookie } from "@/components/privacy/privacy";
 import { ToastProvider } from "@/components/ui/Toast";
 import "./globals.css";
 
@@ -46,6 +48,22 @@ const interLatinExt = localFont({
   ],
 });
 
+/*
+ * Privacy mode's dots: digits 0-9 only, each drawn as one dot at Inter's tabular width (scripts/build-privacy-font.py).
+ * Preloaded (364 bytes) so the eye toggle hides amounts instantly; "block" keeps digits invisible, never real,
+ * while it loads.
+ */
+const privacyDots = localFont({
+  src: "../fonts/privacy-dots.woff2",
+  display: "block",
+  variable: "--font-privacy",
+  adjustFontFallback: false,
+  declarations: [
+    { prop: "font-family", value: "Tenth Privacy" },
+    { prop: "unicode-range", value: "U+0030-0039" },
+  ],
+});
+
 export const metadata: Metadata = {
   title: { default: "Tenth", template: "%s · Tenth" },
   description: "A private record of income received and the tenth set aside to give.",
@@ -73,8 +91,10 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   // on scripts of dynamically rendered pages. A prerendered page (including /_not-found) would have all its
   // scripts blocked by the CSP.
   await connection();
+  // The eye toggle's choice, so a reload renders amounts already hidden (no flash of real numbers).
+  const privacy = privacyFromCookie((await cookies()).get(PRIVACY_COOKIE)?.value);
   return (
-    <html lang="en-CA" className={`${interLatin.variable} ${interLatinExt.variable}`}>
+    <html lang="en-CA" className={`${interLatin.variable} ${interLatinExt.variable} ${privacyDots.variable}`} data-privacy={privacy}>
       <body className="min-h-dvh bg-bg text-text antialiased">
         <ToastProvider>{children}</ToastProvider>
       </body>

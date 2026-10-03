@@ -67,7 +67,7 @@ export function Amount({ minor, currency, size = "md", tone = "default", sign = 
   const { glyph } = amountSignParts(minor, sign);
   const big = size === "xl" || size === "hero";
   return (
-    <span className={cn("tabular inline-flex whitespace-nowrap", toneClasses[tone], s.root, className)} data-amount-minor={minor} data-currency={currency}>
+    <span className={cn("tabular inline-flex whitespace-nowrap", toneClasses[tone], s.root, className)} data-amount-minor={minor} data-currency={currency} data-sensitive>
       <span aria-hidden="true" className={cn("inline-flex", big ? "items-baseline gap-[0.18em]" : "items-baseline gap-[0.3em]")}>
         {!big ? <span className={cn("font-medium text-text-2", s.code)}>{currency}</span> : null}
         <span>

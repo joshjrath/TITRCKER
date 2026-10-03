@@ -17,14 +17,14 @@ export interface LongTextProps {
 export function LongText({ label, text, className }: LongTextProps) {
   if (text.length <= COLLAPSE_AT) {
     return (
-      <p className={cn("text-label text-text-2 [overflow-wrap:anywhere]", className)}>
+      <p className={cn("text-label text-text-2 [overflow-wrap:anywhere]", className)} data-sensitive>
         <span className="text-text-3">{label}: </span>
         {text}
       </p>
     );
   }
   return (
-    <details className={cn("group text-label text-text-2", className)}>
+    <details className={cn("group text-label text-text-2", className)} data-sensitive>
       <summary className="flex min-h-8 cursor-pointer list-none items-baseline gap-2 rounded-[6px] [&::-webkit-details-marker]:hidden">
         <span className="min-w-0 flex-1 truncate group-open:hidden">
           <span className="text-text-3">{label}: </span>

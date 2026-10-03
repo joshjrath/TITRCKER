@@ -43,5 +43,9 @@ export function CombinedBreakdown({ combined, className }: { combined: CombinedT
 export function CombinedTotalLine({ combined, className }: { combined: CombinedTotalVM; className?: string }) {
   const text = combinedOneLiner(combined);
   if (!text) return null;
-  return <p className={cn("tabular text-label text-text-2", className)}>{text}</p>;
+  return (
+    <p className={cn("tabular text-label text-text-2", className)} data-sensitive>
+      {text}
+    </p>
+  );
 }

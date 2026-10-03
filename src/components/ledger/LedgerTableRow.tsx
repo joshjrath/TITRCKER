@@ -42,7 +42,7 @@ export function LedgerTableRow({ row, actions, highlight }: LedgerTableRowProps)
             <div className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-text-3">
               <CategoryChip category={row.category} decorative className="max-w-[45%] desk:hidden" />
               {row.note !== null ? (
-                <span ref={noteRef} className={cn("min-w-0 truncate", open && "hidden")}>
+                <span ref={noteRef} className={cn("min-w-0 truncate", open && "hidden")} data-sensitive>
                   {row.note}
                 </span>
               ) : null}

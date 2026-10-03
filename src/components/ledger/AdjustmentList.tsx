@@ -18,7 +18,9 @@ export function AdjustmentList({ row, onRemove, className }: AdjustmentListProps
   if (row.adjustments.length === 0) return null;
   return (
     <div className={cn("border-l-2 border-copper/40 pl-3", className)}>
-      <p className="tabular text-label font-medium text-text-2">{netSummaryText(row)}</p>
+      <p className="tabular text-label font-medium text-text-2" data-sensitive>
+        {netSummaryText(row)}
+      </p>
       <ul className="mt-1 flex flex-col" aria-label={`Refunds and corrections for this entry`}>
         {row.adjustments.map((a) => {
           const kind = KIND_LABEL[a.kind];

@@ -198,7 +198,7 @@ export function CumulativeChart({
               <span className={styles.readoutLabel}>{selected >= 0 ? 'Selected' : 'Latest'}</span>
             </div>
             <div className={styles.readoutCell}>
-              <span className={styles.readoutValue}>
+              <span className={styles.readoutValue} data-sensitive>
                 <span className={styles.readoutCode}>{currency}</span>
                 {money(active.accruedMinor)}
               </span>
@@ -209,7 +209,7 @@ export function CumulativeChart({
             </div>
             {hasGiven && active.givenMinor !== null && (
               <div className={styles.readoutCell}>
-                <span className={styles.readoutValue}>
+                <span className={styles.readoutValue} data-sensitive>
                   <span className={styles.readoutCode}>{currency}</span>
                   {money(active.givenMinor)}
                 </span>
@@ -268,7 +268,7 @@ export function CumulativeChart({
             scale.ticks.map((v, i) => (
               <g key={v}>
                 <line x1={x0} x2={x1} y1={Math.round(y(v)) + 0.5} y2={Math.round(y(v)) + 0.5} className={v === 0 ? styles.axis : styles.grid} />
-                <text x={x0 - 10} y={y(v) + 3.5} textAnchor="end" className={styles.svgText}>
+                <text x={x0 - 10} y={y(v) + 3.5} textAnchor="end" className={styles.svgText} data-sensitive>
                   {tickLabels[i]}
                 </text>
               </g>
@@ -392,8 +392,8 @@ export function CumulativeChart({
                   {points.map((p) => (
                     <tr key={p.date}>
                       <th scope="row">{dateLabel(p.date)}</th>
-                      <td>{money(p.accruedMinor)}</td>
-                      {hasGiven && <td>{p.givenMinor === null ? '—' : money(p.givenMinor)}</td>}
+                      <td data-sensitive>{money(p.accruedMinor)}</td>
+                      {hasGiven && <td data-sensitive>{p.givenMinor === null ? '—' : money(p.givenMinor)}</td>}
                     </tr>
                   ))}
                 </tbody>

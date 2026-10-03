@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { formatLocalDate, formatMoney, type Currency, type PayoutStatus } from "@/domain";
 import { AnimatedAmount } from "@/components/motion";
+import { PrivacyToggle } from "@/components/privacy";
 import { Amount, Badge, Stat, StatRow, type BadgeTone } from "@/components/ui";
 import { CombinedTotalLine } from "@/components/fx";
 import type { CombinedTotalVM, CurrencyHeadlineVM } from "@/lib/view-models";
@@ -37,9 +38,12 @@ export function GivenSummary({ currency, headline, payout, other, combined }: Gi
       aria-labelledby="given-balance-title"
       className="noise hero-glow relative overflow-hidden rounded-panel-lg border border-line bg-surface p-5 md:p-8"
     >
-      <h2 id="given-balance-title" className="text-label text-text-2">
-        Still to give · {currency}
-      </h2>
+      <div className="flex items-center gap-2">
+        <h2 id="given-balance-title" className="text-label text-text-2">
+          Still to give · {currency}
+        </h2>
+        <PrivacyToggle className="-my-2.5 md-fine:-my-1.5" />
+      </div>
       <p className="@container mt-3">
         <AnimatedAmount minor={headline.stillToGiveMinor} currency={currency} size="hero" />
       </p>

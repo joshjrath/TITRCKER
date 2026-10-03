@@ -91,6 +91,19 @@ from outside.
 Scripture quotations are taken from the Holy Bible, New Living Translation, copyright © 1996, 2004, 2015 by Tyndale
 House Foundation. Used by permission of Tyndale House Publishers, Carol Stream, Illinois 60188. All rights reserved.
 
+## Hide amounts (privacy eye)
+
+The eye next to the main total turns every amount on screen into dots. It sits beside "Total still to give" on the
+Overview, and beside the main figure on Ledger, Given and Set aside. Words, dates and currency codes stay readable,
+and nothing moves. The choice is remembered on every page and after a reload until you tap the eye again. A small
+cookie holds it, and the server renders the page already hidden, so real numbers never flash on screen.
+
+- **Where it doesn't apply:** forms, confirmations and toasts still show real numbers, because you opened them to type
+  or check an amount.
+- **How it works:** a 360-byte font draws digits 0–9 as dots, built by `scripts/build-privacy-font.py`. Anything showing
+  money carries `data-sensitive`, and `src/app/globals.css` switches those elements to that font.
+- **Tests:** an end-to-end test checks every page for any amount still showing while the eye is on.
+
 ## Stack
 
 - **Next.js 16** (App Router, React 19.2, TypeScript strict)

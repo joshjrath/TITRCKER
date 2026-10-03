@@ -87,7 +87,7 @@ export function AnimatedAmount({
   const code = <span className={styles.code}>{currency}</span>;
 
   return (
-    <span className={[styles.amount, styles[size], size === 'hero' ? heroFitClass(final.whole) : '', className].filter(Boolean).join(' ')}>
+    <span className={[styles.amount, styles[size], size === 'hero' ? heroFitClass(final.whole) : '', className].filter(Boolean).join(' ')} data-sensitive>
       <span className={styles.srOnly}>
         {final.sign ? 'minus ' : ''}
         {formatMoney(toMinor(valueMinor), currency, { sign: 'never' })}

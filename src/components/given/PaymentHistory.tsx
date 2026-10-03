@@ -75,7 +75,7 @@ function PaymentItem({ payment }: { payment: PaymentVM }) {
           <LongText label="Reversed" text={payment.reversalReason ?? "No reason recorded"} />
         ) : null}
         {payment.linkedSetAsideMinor > 0 ? (
-          <p className="text-label text-text-3">
+          <p className="text-label text-text-3" data-sensitive>
             {keepMoneyTogether(
               reversed
                 ? `The ${formatMoney(payment.linkedSetAsideMinor, payment.currency)} taken out of Set aside was put back.`
@@ -108,7 +108,7 @@ function AllocationSummary({ payment }: { payment: PaymentVM }) {
   if (payment.unallocatedMinor > 0) parts.push(`Credit: ${formatMoney(payment.unallocatedMinor, payment.currency)}`);
   if (parts.length === 0) return null;
   return (
-    <p className="tabular text-label text-text-2">
+    <p className="tabular text-label text-text-2" data-sensitive>
       <span className="text-text-3">Covers </span>
       {keepMoneyTogether(parts.join(" · "))}
     </p>

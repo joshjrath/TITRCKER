@@ -6,6 +6,9 @@
  */
 @custom-variant md-fine (@media (width >= 48rem) and (pointer: fine));
 
+/* privacy: while the eye toggle hides amounts (<html data-privacy="on">). */
+@custom-variant privacy (&:where([data-privacy="on"] *));
+
 /*
  * Tenth design tokens.
  *
@@ -320,6 +323,19 @@
   to {
     opacity: 1;
   }
+}
+
+/* ---------- Privacy mode ---------- */
+
+/*
+ * The eye toggle hides amounts: inside anything marked data-sensitive, digits render in "Tenth Privacy", a font
+ * whose 0-9 are all one dot (src/fonts, loaded in the root layout). Letters, currency codes and punctuation fall
+ * through to Inter, and the digits keep Inter's width, so nothing moves.
+ */
+[data-privacy="on"] [data-sensitive],
+[data-privacy="on"] [data-sensitive] * {
+  font-family: "Tenth Privacy", var(--font-sans);
+  font-synthesis: none;
 }
 
 /* ---------- Utilities ---------- */

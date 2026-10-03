@@ -80,7 +80,9 @@ export function FullTextPanel({ row, id, className }: { row: IncomeRowVM; id: st
       {row.note !== null ? (
         <>
           <dt className="text-text-3">Note</dt>
-          <dd className="whitespace-pre-line text-text-2 [overflow-wrap:anywhere]">{row.note}</dd>
+          <dd className="whitespace-pre-line text-text-2 [overflow-wrap:anywhere]" data-sensitive>
+            {row.note}
+          </dd>
         </>
       ) : null}
     </dl>

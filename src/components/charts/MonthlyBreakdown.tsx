@@ -29,7 +29,9 @@ const LONG_FIGURE_CHARS = 10;
 
 function Value({ minor }: { minor: number }) {
   return (
-    <span className={[styles.cellValue, minor === 0 ? styles.zero : ''].join(' ')}>{formatMinorDisplay(minor)}</span>
+    <span className={[styles.cellValue, minor === 0 ? styles.zero : ''].join(' ')} data-sensitive>
+      {formatMinorDisplay(minor)}
+    </span>
   );
 }
 

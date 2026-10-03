@@ -6,19 +6,26 @@ import { Amount, Badge, Stat, StatRow } from "@/components/ui";
 import type { SetAsideCurrencyVM, SetAsideEntryVM } from "@/lib/view-models";
 
 import { LongText } from "@/components/given/LongText";
+import { PrivacyToggle } from "@/components/privacy";
 
 import { DeleteSetAsideButton } from "./DeleteSetAsideButton";
 
-/** One currency's Set aside: balance, still to give, still to set aside, and the history (newest first). */
-export function SetAsideCurrencySection({ data }: { data: SetAsideCurrencyVM }) {
+/**
+ * One currency's Set aside: balance, still to give, still to set aside, and the history (newest first).
+ * `privacyToggle` puts the eye (hide amounts) beside the heading; the page shows it on the first section.
+ */
+export function SetAsideCurrencySection({ data, privacyToggle = false }: { data: SetAsideCurrencyVM; privacyToggle?: boolean }) {
   const { currency } = data;
   const titleId = `set-aside-${currency}`;
   const newestFirst = [...data.history].reverse();
   return (
     <section aria-labelledby={titleId} className="flex flex-col gap-6 rounded-panel-lg border border-line bg-surface p-5 md:p-7">
-      <h2 id={titleId} className="eyebrow">
-        {currency}
-      </h2>
+      <div className="-my-2 flex min-h-11 items-center justify-between gap-2 md-fine:min-h-9">
+        <h2 id={titleId} className="eyebrow">
+          {currency}
+        </h2>
+        {privacyToggle ? <PrivacyToggle className="-mr-2" /> : null}
+      </div>
       <StatRow>
         <Stat label="Set aside balance" minor={data.balanceMinor} currency={currency} size="xl" />
         <Stat label="Still to give" minor={data.stillToGiveMinor} currency={currency} size="lg" sublabel="What you owe your church" />

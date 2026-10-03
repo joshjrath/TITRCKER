@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { CombinedTotalLine, ledgerCombinedLine, ledgerCombinedSegments } from "@/components/fx";
+import { PrivacyToggle } from "@/components/privacy";
 import { Amount, cn, keepMoneyTogether } from "@/components/ui";
 import type { CombinedTotalVM, CurrencyHeadlineVM, FxRateVM } from "@/lib/view-models";
 import { combinedSelectionTotals, entryCountText, type CurrencyTotals } from "./ledger-view";
@@ -51,7 +52,7 @@ export function FilteredTotals({ totals, shown, total, filtered, rate = null, cl
         </p>
       ))}
       {combined && rate ? (
-        <p className="tabular mt-1 flex flex-wrap gap-x-1.5 text-label text-text-2" data-testid="ledger-combined-total">
+        <p className="tabular mt-1 flex flex-wrap gap-x-1.5 text-label text-text-2" data-testid="ledger-combined-total" data-sensitive>
           <span className="sr-only">{ledgerCombinedLine(combined, rate)}</span>
           {ledgerCombinedSegments(combined, rate).map((part, i, all) => (
             <span key={part} aria-hidden="true" className="whitespace-nowrap">
@@ -82,9 +83,12 @@ export function AllTimeBalance({ headlines, combined, className }: AllTimeBalanc
       className={cn("flex flex-col gap-3 border-y border-line py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6", className)}
     >
       <div className="flex flex-col gap-1.5">
-        <h2 id="ledger-alltime" className="text-label font-medium text-text-2">
-          All-time still to give <span className="font-normal text-text-3">· not affected by filters</span>
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2 id="ledger-alltime" className="text-label font-medium text-text-2">
+            All-time still to give <span className="font-normal text-text-3">· not affected by filters</span>
+          </h2>
+          <PrivacyToggle className="-my-2.5 md-fine:-my-1.5" />
+        </div>
         <ul className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
           {active.map((h) => (
             <li key={h.currency} className="flex flex-wrap items-baseline gap-x-2">

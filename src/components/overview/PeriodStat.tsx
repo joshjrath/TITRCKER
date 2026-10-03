@@ -43,12 +43,16 @@ export function PeriodStat({ label, minor, currency, note, noteTone = "muted", c
         )}
       </dd>
       {combined ? (
-        <dd className="tabular basis-full text-xs text-text-2" data-testid="period-stat-parts">
+        <dd className="tabular basis-full text-xs text-text-2" data-testid="period-stat-parts" data-sensitive>
           <span className="sr-only">Separately: </span>
           {keepMoneyTogether(combinedPartsText(combined.amount))}
         </dd>
       ) : null}
-      {note ? <dd className={noteTone === "positive" ? "basis-full text-xs text-positive" : "basis-full text-xs text-text-3"}>{keepMoneyTogether(note)}</dd> : null}
+      {note ? (
+        <dd className={noteTone === "positive" ? "basis-full text-xs text-positive" : "basis-full text-xs text-text-3"} data-sensitive>
+          {keepMoneyTogether(note)}
+        </dd>
+      ) : null}
     </div>
   );
 }

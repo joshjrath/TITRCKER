@@ -70,6 +70,61 @@ test("Overview: Romans 8:18 stays pinned and every reload shows a different vers
   }
 });
 
+test("privacy: the eye hides every amount on every page and remembers it", async ({ page }, testInfo) => {
+  /** Amounts ("1,234.56") on screen whose digits are not drawn as privacy dots (dialogs and form fields excluded). */
+  const visibleAmounts = () =>
+    page.evaluate(async () => {
+      await document.fonts.ready;
+      const money = /\d{1,3}(?:,\d{3})*\.\d{2}(?!\d)/;
+      // A figure can be split over nested spans ("1,463" + ".59"), so also look at the spans around it.
+      const looksLikeMoney = (el: Element) => {
+        const parent = el.parentElement?.tagName === "SPAN" ? el.parentElement : null;
+        const grandparent = parent?.parentElement?.tagName === "SPAN" ? parent.parentElement : null;
+        return [el, parent, grandparent].some((a) => a && (a.textContent ?? "").length <= 40 && money.test(a.textContent ?? ""));
+      };
+      const shown: string[] = [];
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const el = node.parentElement;
+        if (!el || !/\d/.test(node.nodeValue ?? "") || !looksLikeMoney(el)) continue;
+        if (el.closest("script, style, [role=dialog], input, textarea, select, .sr-only")) continue;
+        const box = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
+        if (box.width <= 1 || box.height <= 1 || style.visibility === "hidden" || style.display === "none") continue;
+        if (!style.fontFamily.replaceAll('"', "").startsWith("Tenth Privacy")) shown.push((node.nodeValue ?? "").trim());
+      }
+      return shown;
+    });
+
+  await page.goto("/");
+  await expect(page.getByTestId("still-to-give-amount")).toBeVisible();
+  expect((await visibleAmounts()).length).toBeGreaterThan(0);
+
+  await page.getByRole("button", { name: "Hide amounts" }).first().click();
+  await expect(page.locator("html")).toHaveAttribute("data-privacy", "on");
+  await expect(page.getByRole("button", { name: "Show amounts" }).first()).toBeVisible();
+  expect(await page.evaluate(() => document.fonts.check('16px "Tenth Privacy"', "0"))).toBe(true);
+  expect(await visibleAmounts()).toEqual([]);
+  await page.screenshot({ path: `e2e/screenshots/${testInfo.project.name}-overview-privacy.png` });
+
+  // Every page stays hidden, including after a reload (no flash of real numbers: the server renders it hidden).
+  for (const path of ["/ledger", "/given", "/set-aside", "/settings"]) {
+    await page.goto(path);
+    await expect(page.locator("html")).toHaveAttribute("data-privacy", "on");
+    expect(await visibleAmounts(), path).toEqual([]);
+  }
+  await page.goto("/ledger");
+  const served = await (await page.request.get("/ledger")).text();
+  expect(served).toContain('data-privacy="on"');
+
+  // The eye on another page turns it off again.
+  await page.getByRole("button", { name: "Show amounts" }).first().click();
+  await expect(page.locator("html")).toHaveAttribute("data-privacy", "off");
+  expect((await visibleAmounts()).length).toBeGreaterThan(0);
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-privacy", "off");
+});
+
 test("the balance stays put when the quick entry opens its details", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "visual-1440", "the quick entry shares the hero's row on desktop only");
   await page.goto("/");

@@ -48,7 +48,7 @@ function LedgerListItem({ row, actions, highlight }: { row: IncomeRowVM; actions
       {row.note !== null || expandable ? (
         <div className="mt-1 flex min-w-0 items-center gap-2 pr-3 text-xs text-text-3">
           {row.note !== null ? (
-            <span ref={noteRef} className={cn("min-w-0 truncate", open && "hidden")}>
+            <span ref={noteRef} className={cn("min-w-0 truncate", open && "hidden")} data-sensitive>
               {row.note}
             </span>
           ) : null}

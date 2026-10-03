@@ -2,6 +2,7 @@ import Link from "next/link";
 import { formatMoney, type BucketPosition, type Currency, type PeriodSummary } from "@/domain";
 import { AddIncomeButton } from "@/components/app/AddIncomeButton";
 import { AnimatedAmount } from "@/components/motion";
+import { PrivacyToggle } from "@/components/privacy";
 import { chartCurrencyNote, CombinedBreakdown, combinedRateNote, spokenCombined } from "@/components/fx";
 import { Badge, cn, keepMoneyTogether } from "@/components/ui";
 import type { CombinedPeriodVM, CombinedTotalVM, CurrencyHeadlineVM } from "@/lib/view-models";
@@ -40,7 +41,7 @@ function OtherCurrencyLine({ other, periodKey }: { other: CurrencyHeadlineVM; pe
         : `Nothing to give in ${c}`;
   return (
     <p className="text-label text-text-2">
-      Also: <span className="tabular text-text">{text}</span>{" "}
+      Also: <span className="tabular text-text" data-sensitive>{text}</span>{" "}
       <Link href={overviewHref({ period: periodKey, currency: c })} className="text-accent underline-offset-4 hover:underline">
         Show {c}
       </Link>
@@ -90,6 +91,7 @@ export function BalanceHero({
           <Badge tone="accent" title="Tithe rate: 10% of each entry">
             10%<span className="sr-only"> tithe rate</span>
           </Badge>
+          <PrivacyToggle className="-my-2.5 md-fine:-my-1.5" />
         </div>
         <p className="@container mt-3 flex items-baseline gap-2 md:mt-4" data-testid="still-to-give-amount">
           {showTotal && combined.status === "combined" ? (
@@ -110,7 +112,7 @@ export function BalanceHero({
         {notes.length > 0 || (other && !usdActive) ? (
           <ul className="mt-4 flex flex-col gap-1.5">
             {notes.map((n) => (
-              <li key={n.key} className={cn("tabular text-label", n.tone === "positive" ? "text-positive" : "text-text-2")}>
+              <li key={n.key} className={cn("tabular text-label", n.tone === "positive" ? "text-positive" : "text-text-2")} data-sensitive>
                 {keepMoneyTogether(n.text)}
               </li>
             ))}

@@ -30,8 +30,8 @@ export default async function SetAsidePage() {
         description="Optional. A record of money you've put aside for your tithe until you give it. Setting money aside never changes what you owe."
         actionSlot={<AddSetAsideButton today={vm.today} defaultCurrency={defaultCurrency} balances={balances} />}
       />
-      {sections.map((data) => (
-        <SetAsideCurrencySection key={data.currency} data={data} />
+      {sections.map((data, index) => (
+        <SetAsideCurrencySection key={data.currency} data={data} privacyToggle={index === 0} />
       ))}
     </div>
   );

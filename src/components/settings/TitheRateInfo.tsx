@@ -25,7 +25,7 @@ export function TitheRateInfo({ titheRateBps, currency }: TitheRateInfoProps) {
       </div>
       <p className="text-[0.9375rem] text-text-2">
         Each entry&apos;s tithe is rounded to the nearest cent, half up:{" "}
-        <span className="tabular whitespace-nowrap text-text">
+        <span className="tabular whitespace-nowrap text-text" data-sensitive>
           {formatMoney(ODD, currency)} → {formatMoney(tithe(ODD), currency)}
         </span>
         . Totals are sums of those rounded amounts, never {percent} of a total.
@@ -42,7 +42,7 @@ export function TitheRateInfo({ titheRateBps, currency }: TitheRateInfoProps) {
             </th>
           </tr>
         </thead>
-        <tbody className="tabular divide-y divide-line border-y border-line">
+        <tbody className="tabular divide-y divide-line border-y border-line" data-sensitive>
           {EXAMPLES.map((amount) => (
             <tr key={amount}>
               <td className="py-2 text-right text-text-2">{formatMoney(amount, currency)}</td>
@@ -51,7 +51,7 @@ export function TitheRateInfo({ titheRateBps, currency }: TitheRateInfoProps) {
           ))}
         </tbody>
       </table>
-      <p className="text-label text-text-3">
+      <p className="text-label text-text-3" data-sensitive>
         So {formatMoney(SALARY, currency)} and {formatMoney(ODD, currency)} received add{" "}
         {formatMoney(addMinor(tithe(SALARY), tithe(ODD)), currency)} to what you give. An entry too small to round up to a cent is still
         kept in your record.
