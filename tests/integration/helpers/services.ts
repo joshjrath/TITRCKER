@@ -33,3 +33,8 @@ export async function expectServiceError(
   if (field) expect(error.fieldErrors?.[field], `fieldErrors.${field}`).toBeTruthy();
   return error;
 }
+
+/** An instant that is mid-day on `date` in America/Toronto (17:00Z = 12:00 EST / 13:00 EDT). */
+export function noonToronto(date: string): Date {
+  return new Date(`${date}T17:00:00Z`);
+}
