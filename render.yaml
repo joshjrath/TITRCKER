@@ -6,7 +6,7 @@ services:
     name: tenth
     runtime: node
     plan: starter            # any paid plan avoids cold starts; "free" also works but sleeps when idle
-    region: oregon           # keep the web service and database in the same region
+    region: ohio             # closest Render region to Toronto; keep the web service and database in the same region
     buildCommand: npm ci --include=dev && npm run build   # build tools (TypeScript, Tailwind) are devDependencies
     # Migrations run before the server starts (safe to repeat; guarded by an advisory lock).
     startCommand: npm run start:render
@@ -35,5 +35,6 @@ databases:
     databaseName: tenth
     user: tenth_app
     plan: basic-256mb        # paid plans include backups / point-in-time recovery; free databases expire
+    region: ohio             # must match the web service's region
     postgresMajorVersion: "16"
     ipAllowList: []          # no public access; only services in your Render account can connect (pg_dump: see README)
