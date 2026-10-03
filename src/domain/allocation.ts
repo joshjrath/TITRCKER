@@ -24,8 +24,12 @@ export interface ProposedAllocation {
  * Proposes an allocation for a payment of `amountMinor`: fills buckets with outstanding > 0 in
  * ascending year order until the payment is used up; the remainder is credit.
  * `buckets` must be the current positions of the payment's currency.
+ * @throws RangeError for a negative or non-integer amount (it would propose negative credit).
  */
 export function proposeAllocation(amountMinor: Minor, buckets: readonly BucketPosition[]): ProposedAllocation {
+  if (!Number.isSafeInteger(amountMinor) || amountMinor < 0) {
+    throw new RangeError(`Payment amount must be a non-negative integer, got ${String(amountMinor)}`);
+  }
   const allocations: AllocationLine[] = [];
   let remaining = amountMinor;
   const oldestFirst = [...buckets].sort((a, b) => a.year - b.year);

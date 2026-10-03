@@ -12,7 +12,8 @@ import type { Currency } from './constants';
 import { yearOf, type LocalDate } from './dates';
 import type { Minor } from './money';
 import { adjustmentsByIncome, type LedgerSnapshot } from './records';
-import { adjustmentTitheDeltas, compareByDateCreatedId, compareStrings } from './tithe';
+import { compareByDateCreatedId, compareStrings } from './ordering';
+import { adjustmentTitheDeltas } from './tithe';
 
 export type ObligationSource = 'income' | 'refund' | 'opening';
 

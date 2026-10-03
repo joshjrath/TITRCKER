@@ -23,7 +23,7 @@ import {
 } from './money';
 import { deriveObligationEvents, type ObligationEvent } from './obligations';
 import { allTimeRange, periodRangeForYear, type PeriodKey, type PeriodRange } from './periods';
-import { adjustmentsByIncome, type LedgerSnapshot } from './records';
+import { adjustmentsByIncome, type LedgerSnapshot, type PaymentRecord } from './records';
 import { setAsideBalance, stillToSetAside } from './setAside';
 
 export interface BucketPosition {
@@ -150,18 +150,41 @@ function collectBucketTotals(
   return byYear;
 }
 
-/** Σ allocations of each payment, checked against the payment amount. */
-function unallocatedRemainder(snapshot: LedgerSnapshot, currency: Currency): { paid: Minor; allocated: Minor } {
+/**
+ * Rejects a payment whose stored allocations break the §3.6 / database rules (positive payment,
+ * positive lines, one line per bucket year, Σ lines <= payment). Such input is corrupt; computing a
+ * balance from it would silently move money between buckets.
+ * @throws BalanceInvariantError describing the first broken rule.
+ */
+function assertValidPayment(payment: PaymentRecord): Minor {
+  if (!Number.isSafeInteger(payment.amountMinor) || payment.amountMinor <= 0) {
+    throw new BalanceInvariantError(`Payment ${payment.id} must have a positive amount`);
+  }
+  const years = new Set<number>();
+  for (const allocation of payment.allocations) {
+    if (!Number.isSafeInteger(allocation.amountMinor) || allocation.amountMinor <= 0) {
+      throw new BalanceInvariantError(`Payment ${payment.id} has a non-positive allocation`);
+    }
+    if (!Number.isSafeInteger(allocation.bucketYear) || years.has(allocation.bucketYear)) {
+      throw new BalanceInvariantError(`Payment ${payment.id} has an invalid or repeated bucket year`);
+    }
+    years.add(allocation.bucketYear);
+  }
+  const allocated = sumMinor(payment.allocations.map((a) => a.amountMinor));
+  if (allocated > payment.amountMinor) {
+    throw new BalanceInvariantError(`Payment ${payment.id} allocates more than its amount`);
+  }
+  return allocated;
+}
+
+/** Σ active payments and Σ their allocations for one currency (each payment validated). */
+function paymentTotals(snapshot: LedgerSnapshot, currency: Currency): { paid: Minor; allocated: Minor } {
   let paid = ZERO;
   let allocated = ZERO;
   for (const payment of snapshot.payments) {
     if (payment.currency !== currency) continue;
-    const paymentAllocated = sumMinor(payment.allocations.map((a) => a.amountMinor));
-    if (paymentAllocated > payment.amountMinor) {
-      throw new BalanceInvariantError(`Payment ${payment.id} allocates more than its amount`);
-    }
+    allocated = addMinor(allocated, assertValidPayment(payment));
     paid = addMinor(paid, payment.amountMinor);
-    allocated = addMinor(allocated, paymentAllocated);
   }
   return { paid, allocated };
 }
@@ -174,7 +197,7 @@ function computeCurrencyBalance(
   trackingStart: LocalDate,
 ): CurrencyBalance {
   const byYear = collectBucketTotals(snapshot, events, currency);
-  const { paid, allocated } = unallocatedRemainder(snapshot, currency);
+  const { paid, allocated } = paymentTotals(snapshot, currency);
   const unallocated = subMinor(paid, allocated);
 
   const years = [...byYear.keys()].sort((a, b) => a - b);
@@ -253,7 +276,9 @@ function computeCurrencyBalance(
 /**
  * Computes every currency's balance from the active records. Each currency is independent.
  * Pass precomputed `events` (from {@link deriveObligationEvents}) to avoid deriving them twice.
- * @throws BalanceInvariantError if Σ outstanding != still to give or remaining pool != credit.
+ * @throws BalanceInvariantError if Σ outstanding != still to give or remaining pool != credit, or a
+ *   payment's allocations are corrupt (non-positive, repeated year, or more than the payment).
+ * @throws RangeError if a total leaves the safe-integer range.
  */
 export function computeBalances(
   snapshot: LedgerSnapshot,

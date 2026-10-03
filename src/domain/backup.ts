@@ -71,7 +71,21 @@ export interface BackupV1 {
   auditEvents: BackupAuditEvent[];
 }
 
-/** Assembles a backup document. `balances` must be computed from the active records only. */
+/** Copies every record (and each payment's allocations) so the backup never aliases caller data. */
+function copyRecords(records: BackupRecords): BackupRecords {
+  return {
+    incomes: records.incomes.map((r) => ({ ...r })),
+    adjustments: records.adjustments.map((r) => ({ ...r })),
+    openings: records.openings.map((r) => ({ ...r })),
+    payments: records.payments.map((r) => ({ ...r, allocations: r.allocations.map((a) => ({ ...a })) })),
+    setAsides: records.setAsides.map((r) => ({ ...r })),
+  };
+}
+
+/**
+ * Assembles a backup document. `balances` must be computed from the active records only. The
+ * result is an independent copy: later changes to the inputs never alter an assembled backup.
+ */
 export function buildBackup(input: {
   exportedAt: string;
   accountEmail: string;
@@ -96,11 +110,11 @@ export function buildBackup(input: {
     version: BACKUP_VERSION,
     exportedAt: input.exportedAt,
     account: { email: input.accountEmail },
-    settings: input.settings,
+    settings: { ...input.settings },
     policy: { titheRateBps: TITHE_RATE_BPS, roundingPolicy: ROUNDING_POLICY, currencies: [...CURRENCIES] },
-    records: input.records,
+    records: copyRecords(input.records),
     totals,
-    auditEvents: [...input.auditEvents],
+    auditEvents: input.auditEvents.map((event) => ({ ...event })),
   };
 }
 

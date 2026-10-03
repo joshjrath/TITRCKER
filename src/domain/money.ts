@@ -36,9 +36,9 @@ export function addMinor(...xs: Minor[]): Minor {
   return sumMinor(xs);
 }
 
-/** `a - b`. @throws RangeError on overflow. */
+/** `a - b`. @throws RangeError on overflow or when an operand is not a safe integer. */
 export function subMinor(a: Minor, b: Minor): Minor {
-  return toMinor(a - b);
+  return toMinor(toMinor(a) - toMinor(b));
 }
 
 /**
@@ -54,9 +54,9 @@ export function sumMinor(xs: Iterable<Minor>): Minor {
   return toMinor(total);
 }
 
-/** `-a`. */
+/** `-a`. @throws RangeError when `a` is not a safe integer. */
 export function negMinor(a: Minor): Minor {
-  return toMinor(-a);
+  return toMinor(-toMinor(a));
 }
 
 /** Larger of two amounts. */
@@ -103,8 +103,13 @@ export const AMOUNT_ERROR_MESSAGES: Record<AmountParseError, string> = {
   too_large: 'The amount must be 999,999,999.99 or less.',
 };
 
-const SIGN_CHARACTERS = /^[-+−﹣＋－]/;
-const SCIENTIFIC_NOTATION = /^[\d.,]*\d[\d.,]*[eE][-+]?\d+$/;
+/** ASCII, Unicode minus, small and fullwidth plus/minus signs. */
+const SIGN_CHARACTERS = /^[-+\u2212\ufe62\ufe63\uff0b\uff0d]/;
+/**
+ * A mantissa of digits/dots/commas containing at least one digit, then an exponent. Each part is a
+ * single unbounded run, so matching stays linear on hostile input (no nested backtracking).
+ */
+const SCIENTIFIC_NOTATION = /^(?=[^eE]*\d)[\d.,]+[eE][-+]?\d+$/;
 /**
  * Optional integer part (plain digits without superfluous leading zeros, or exact groups of three
  * separated by commas), then an optional dot followed by at least one digit. The fraction length is

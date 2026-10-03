@@ -9,7 +9,7 @@ import type { Currency } from './constants';
 import type { LocalDate } from './dates';
 import { addMinor, clampZero, negMinor, subMinor, ZERO, type Minor } from './money';
 import type { SetAsideRecord } from './records';
-import { compareByDateCreatedId } from './tithe';
+import { compareByDateCreatedId } from './ordering';
 
 const KIND_ORDER: Record<SetAsideRecord['kind'], number> = { reserve: 0, release: 1 };
 

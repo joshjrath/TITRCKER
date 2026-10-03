@@ -21,7 +21,10 @@ export interface SeriesPoint {
 export interface CumulativeSeries {
   currency: Currency;
   range: PeriodRange;
-  /** Cumulative accrued tithe; first point is (series start, startValue), one point per event day, last point at series end. */
+  /**
+   * Cumulative accrued tithe: first point is always (range.start, startValue), then one point per
+   * event day (an event on range.start gives a second point on that date), last point at series end.
+   */
   accrued: SeriesPoint[];
   /** Cumulative amount given (same shape as `accrued`). */
   given: SeriesPoint[];
@@ -45,9 +48,12 @@ interface DatedAmount {
 }
 
 /**
- * Builds a step series: a starting point, one point per distinct day (cumulative after that day)
- * and a closing point at `end`. Amounts dated before `start` fold into the start value; amounts
- * after `end` are excluded and reported separately.
+ * Builds a step series: a starting point `(start, startValue)`, one point per distinct day
+ * (cumulative after that day) and a closing point at `end`. Amounts dated before `start` fold into
+ * the start value; amounts after `end` are excluded and reported separately.
+ *
+ * The starting point is never merged with an event day, so amounts dated on `start` itself appear
+ * as a second point on the same date (a step up from the start value) instead of overwriting it.
  */
 function stepSeries(
   items: readonly DatedAmount[],
@@ -57,15 +63,17 @@ function stepSeries(
   const sorted = [...items].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
   const startValue = sumMinor(sorted.filter((i) => i.date < start).map((i) => i.amountMinor));
   const after = sumMinor(sorted.filter((i) => i.date > end).map((i) => i.amountMinor));
-  const points: SeriesPoint[] = [{ date: start, valueMinor: startValue }];
+  const startPoint: SeriesPoint = { date: start, valueMinor: startValue };
+  const dayPoints: SeriesPoint[] = [];
   let running = startValue;
   for (const item of sorted) {
     if (item.date < start || item.date > end) continue;
     running = addMinor(running, item.amountMinor);
-    const last = points[points.length - 1];
-    if (last && last.date === item.date) last.valueMinor = running;
-    else points.push({ date: item.date, valueMinor: running });
+    const lastDay = dayPoints[dayPoints.length - 1];
+    if (lastDay && lastDay.date === item.date) lastDay.valueMinor = running;
+    else dayPoints.push({ date: item.date, valueMinor: running });
   }
+  const points = [startPoint, ...dayPoints];
   const last = points[points.length - 1];
   if (!last || last.date < end) points.push({ date: end, valueMinor: running });
   return { points, startValue, endValue: running, after };

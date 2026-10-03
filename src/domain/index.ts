@@ -5,6 +5,7 @@
 export * from './constants';
 export * from './money';
 export * from './tithe';
+export * from './ordering';
 export * from './dates';
 export * from './records';
 export * from './obligations';

@@ -17,6 +17,7 @@ import {
   type RoundingPolicy,
 } from './constants';
 import type { LocalDate } from './dates';
+import { compareByDateCreatedId } from './ordering';
 import { sumMinor, subMinor, toMinor, type Minor } from './money';
 
 /**
@@ -55,29 +56,6 @@ export interface AdjustmentInput {
   amountMinor: Minor;
   effectiveOn: LocalDate;
   createdAt: string;
-}
-
-/** Compares ISO timestamps chronologically, falling back to string order for unparsable input. */
-function compareTimestamps(a: string, b: string): number {
-  const ta = Date.parse(a);
-  const tb = Date.parse(b);
-  if (!Number.isNaN(ta) && !Number.isNaN(tb) && ta !== tb) return ta < tb ? -1 : 1;
-  if (a === b) return 0;
-  return a < b ? -1 : 1;
-}
-
-/** Plain code-unit string comparison (locale independent, deterministic). */
-export function compareStrings(a: string, b: string): number {
-  if (a === b) return 0;
-  return a < b ? -1 : 1;
-}
-
-/** Canonical record order shared by adjustments and other dated records: date, createdAt, id. */
-export function compareByDateCreatedId(
-  a: { date: string; createdAt: string; id: string },
-  b: { date: string; createdAt: string; id: string },
-): number {
-  return compareStrings(a.date, b.date) || compareTimestamps(a.createdAt, b.createdAt) || compareStrings(a.id, b.id);
 }
 
 /** Returns a copy sorted in canonical adjustment order: effectiveOn, then createdAt, then id. */
@@ -142,7 +120,7 @@ export function checkRefundAmount(
  * Telescoping tithe deltas (each <= 0) for an entry's adjustments, keyed by adjustment id, computed
  * in canonical order: `delta_k = tithe(A - R_1..k) - tithe(A - R_1..k-1)`. The first step starts
  * from the stored tithe (validated against the formula).
- * @throws RangeError if any adjustment is non-positive or their total exceeds the received amount.
+ * @throws RangeError if any adjustment is non-positive, two share an id, or their total exceeds the received amount.
  */
 export function adjustmentTitheDeltas(income: TitheBasis, adjustments: readonly AdjustmentInput[]): Map<string, Minor> {
   assertTitheBasis(income);
@@ -153,6 +131,8 @@ export function adjustmentTitheDeltas(income: TitheBasis, adjustments: readonly 
     if (!Number.isSafeInteger(adjustment.amountMinor) || adjustment.amountMinor <= 0) {
       throw new RangeError(`Adjustment ${adjustment.id} must be a positive amount`);
     }
+    // Deltas are keyed by id; a repeated id would silently drop a step of the telescoping sum.
+    if (deltas.has(adjustment.id)) throw new RangeError(`Duplicate adjustment id ${adjustment.id}`);
     remainingAmount = subMinor(remainingAmount, adjustment.amountMinor);
     if (remainingAmount < 0) throw new RangeError('Refund limit exceeded: adjustments exceed the received amount');
     const nextTithe = computeTithe(remainingAmount, income.titheRateBps, income.roundingPolicy);

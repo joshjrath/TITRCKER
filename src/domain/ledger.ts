@@ -7,7 +7,8 @@ import { CURRENCIES, type Currency } from './constants';
 import type { LocalDate } from './dates';
 import { addMinor, subMinor, sumMinor, ZERO, type Minor } from './money';
 import { adjustmentsByIncome, type AdjustmentRecord, type IncomeRecord, type LedgerSnapshot } from './records';
-import { adjustmentTitheDeltas, compareByDateCreatedId, compareStrings, sortAdjustments } from './tithe';
+import { compareByDateCreatedId, compareStrings } from './ordering';
+import { adjustmentTitheDeltas, sortAdjustments } from './tithe';
 
 export interface LedgerRow {
   income: IncomeRecord;

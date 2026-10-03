@@ -49,7 +49,7 @@ export function periodRangeForYear(year: number, trackingStart: LocalDate): Peri
   return { key: year, start, end, label: formatRangeLabel(start, end) };
 }
 
-/** Every financially relevant date in the snapshot (events, payments, allocations' years excluded). */
+/** Every financially relevant record date in the snapshot: incomes, adjustments, openings, payments. */
 function snapshotDates(snapshot: LedgerSnapshot): LocalDate[] {
   return [
     ...snapshot.incomes.map((r) => r.receivedOn),
@@ -73,9 +73,10 @@ function snapshotYears(snapshot: LedgerSnapshot): number[] {
  * (so 2027 appears automatically once today is in 2027).
  */
 export function availablePeriodYears(trackingStart: LocalDate, today: LocalDate, snapshot: LedgerSnapshot): number[] {
+  // Folded with reduce rather than spread into Math.min/max, which overflows the stack on large ledgers.
   const years = snapshotYears(snapshot);
-  const first = Math.min(yearOf(trackingStart), ...years);
-  const last = Math.max(yearOf(today), yearOf(trackingStart), ...years);
+  const first = years.reduce((min, year) => Math.min(min, year), yearOf(trackingStart));
+  const last = years.reduce((max, year) => Math.max(max, year), Math.max(yearOf(today), yearOf(trackingStart)));
   const result: number[] = [];
   for (let year = first; year <= last; year += 1) result.push(year);
   return result;
@@ -94,8 +95,8 @@ export function allTimeRange(trackingStart: LocalDate, today: LocalDate, snapsho
   const dates = snapshotDates(snapshot);
   return {
     key: 'all',
-    start: minLocalDate(trackingStart, ...dates),
-    end: maxLocalDate(today, trackingStart, ...dates),
+    start: dates.reduce((min, date) => minLocalDate(min, date), trackingStart),
+    end: dates.reduce((max, date) => maxLocalDate(max, date), maxLocalDate(today, trackingStart)),
     label: ALL_TIME_LABEL,
   };
 }

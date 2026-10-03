@@ -16,7 +16,7 @@ import type { CurrencyBalance } from './balances';
 import { buildLedgerRows, type LedgerRow } from './ledger';
 import type { LedgerSnapshot } from './records';
 import { compareSetAside } from './setAside';
-import { compareByDateCreatedId } from './tithe';
+import { compareByDateCreatedId } from './ordering';
 
 const CSV_NEEDS_QUOTING = /[",\r\n]/;
 /** Leading characters that make spreadsheets evaluate a cell (ASCII and fullwidth forms). */
@@ -143,7 +143,8 @@ export function buildLedgerCsv(
   meta: { exportedAt: string; timeZone: string },
   opts: { bom?: boolean } = {},
 ): string {
-  const rows: LedgerCsvRow[] = [{ record_type: 'export_meta', reference: meta.exportedAt, note: meta.timeZone }];
+  // The time zone is owner-chosen text: neutralise it like any other user field (defence in depth).
+  const rows: LedgerCsvRow[] = [{ record_type: 'export_meta', reference: meta.exportedAt, note: userText(meta.timeZone) }];
   const ledgerRows = buildLedgerRows(snapshot).reverse();
 
   for (const { income } of ledgerRows) {

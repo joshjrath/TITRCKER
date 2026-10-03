@@ -25,6 +25,7 @@ export type MonthKey = string;
 
 const LOCAL_DATE_SHAPE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const MONTH_KEY_SHAPE = /^(\d{4})-(\d{2})$/;
+const MONTH_KEY_LENGTH = 'YYYY-MM'.length;
 
 const MONTH_NAMES_LONG = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -36,10 +37,26 @@ const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', '
 const pad2 = (n: number): string => String(n).padStart(2, '0');
 const pad4 = (n: number): string => String(n).padStart(4, '0');
 
-/** Number of days in a month of the proleptic Gregorian calendar (handles leap years). */
+const DAYS_IN_MONTH_COMMON_YEAR = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] as const;
+const FEBRUARY = 2;
+const LEAP_CYCLE_YEARS = 4;
+const CENTURY_YEARS = 100;
+const GREGORIAN_CYCLE_YEARS = 400;
+
+/** Gregorian leap-year rule: every 4th year, except centuries not divisible by 400. */
+export function isLeapYear(year: number): boolean {
+  return (year % LEAP_CYCLE_YEARS === 0 && year % CENTURY_YEARS !== 0) || year % GREGORIAN_CYCLE_YEARS === 0;
+}
+
+/**
+ * Number of days in a month of the proleptic Gregorian calendar (handles leap years). Pure
+ * arithmetic: `Date.UTC` would silently map years 0–99 to 1900–1999.
+ * @throws RangeError for a month outside 1..12.
+ */
 export function daysInMonth(year: number, month: number): number {
-  // Day 0 of the next month is the last day of this month.
-  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const days = DAYS_IN_MONTH_COMMON_YEAR[month - 1];
+  if (days === undefined) throw new RangeError(`Invalid month: ${month}`);
+  return month === FEBRUARY && isLeapYear(year) ? days + 1 : days;
 }
 
 /**
@@ -65,12 +82,19 @@ export function toLocalDate(s: string): LocalDate {
   return parsed;
 }
 
-/** True when `timeZone` is an IANA zone known to this runtime's Intl data. */
+/** Offset-style zones such as `+05:00` resolve to a name starting with a sign. */
+const OFFSET_ZONE_NAME = /^[+-]/;
+
+/**
+ * True when `timeZone` is an IANA zone known to this runtime's Intl data. Fixed UTC offsets
+ * (`+05:00`, `-0330`, which newer runtimes also accept) are not IANA zones and are rejected:
+ * they ignore DST, so "today" and year boundaries would drift for half the year.
+ */
 export function isValidTimeZone(timeZone: string): boolean {
   if (timeZone.trim() === '') return false;
   try {
-    new Intl.DateTimeFormat('en-US', { timeZone });
-    return true;
+    const resolved = new Intl.DateTimeFormat('en-US', { timeZone }).resolvedOptions().timeZone;
+    return !OFFSET_ZONE_NAME.test(resolved);
   } catch {
     return false;
   }
@@ -161,7 +185,7 @@ export function yearOf(d: LocalDate): number {
 
 /** Month key `YYYY-MM` of a local date. */
 export function monthKeyOf(d: LocalDate): MonthKey {
-  return d.slice(0, 7);
+  return d.slice(0, MONTH_KEY_LENGTH);
 }
 
 /** January 1 of `year`. */
