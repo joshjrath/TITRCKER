@@ -3,6 +3,7 @@ import {
   minLocalDate,
   parseLocalDate,
   periodRangeForYear,
+  toLocalDate,
   yearOf,
   type Currency,
   type LocalDate,
@@ -42,7 +43,7 @@ export function isTrackingDirty(draft: TrackingDraft, saved: TrackingDraft): boo
 }
 
 /** Earliest selectable date in any date input. */
-export const MIN_DATE: LocalDate = `${MIN_SUPPORTED_YEAR}-01-01`;
+export const MIN_DATE: LocalDate = toLocalDate(`${MIN_SUPPORTED_YEAR}-01-01`);
 
 /**
  * Bounds for the tracking start input: never after today, and never after the earliest recorded income
