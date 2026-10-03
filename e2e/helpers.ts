@@ -18,9 +18,9 @@ export async function signIn(page: Page): Promise<void> {
   await page.waitForURL((url) => !url.pathname.startsWith("/sign-in"));
 }
 
-/** The "Still to give" hero region on the Overview (its text includes the visually hidden full amount). */
+/** The big "Still to give" amount on the Overview (its text includes the visually hidden full amount). */
 export function hero(page: Page): Locator {
-  return page.locator("section", { has: page.getByText("Still to give", { exact: true }) }).first();
+  return page.getByTestId("still-to-give-amount");
 }
 
 /** The desktop quick-entry panel on the Overview. */

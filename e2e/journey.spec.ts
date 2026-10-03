@@ -38,10 +38,10 @@ test("one-time setup creates the owner, then disappears", async () => {
 test("signed-in empty account shows the invitation, the 10% marker and the payout countdown", async () => {
   await signIn(page);
   await expect(page).toHaveURL("/");
-  await expect(hero(page)).toContainText("CAD 0.00");
+  await expect(page.getByText(/every payment counts/i).first()).toBeVisible();
+  await expect(page.getByText(/nothing to give right now/i).first()).toBeVisible();
   await expect(page.getByText("10%").first()).toBeVisible();
   await expect(page.getByText("89 days until payout").first()).toBeVisible();
-  await expect(page.getByText(/Oct 3 – Dec 31, 2026/).first()).toBeVisible();
 });
 
 test("adding income shows a live 10% preview and updates the balance after save", async () => {
@@ -51,6 +51,7 @@ test("adding income shows a live 10% preview and updates the balance after save"
   await addIncomeViaQuickEntry(page, "249.99", { expectTithe: "CAD 25.00", source: "Freelance" });
   await expect(hero(page)).toContainText("CAD 200.00");
   await expect(page.getByText("CAD 1,999.99").first()).toBeVisible();
+  await expect(page.getByText(/Oct 3 – Dec 31, 2026/).filter({ visible: true }).first()).toBeVisible();
 });
 
 test("invalid amounts are rejected with a text message and keep the entered value", async () => {
@@ -71,7 +72,7 @@ test("a double-clicked save records the entry once", async () => {
   await expect(hero(page)).toContainText("CAD 201.00");
 
   await page.goto("/ledger");
-  await expect(page.getByText("CAD 10.00", { exact: true })).toHaveCount(1);
+  await expect(page.getByText("CAD 10.00", { exact: true }).filter({ visible: true })).toHaveCount(1);
 });
 
 test("deleting an entry asks for confirmation and removes its tithe", async () => {
@@ -104,10 +105,10 @@ test("editing an entry keeps its tithe and updates the ledger", async () => {
 test("a partial church payment reduces what is still to give", async () => {
   await page.goto("/given");
   await expect(page.getByText(/never moves money/i)).toBeVisible();
-  await page.getByRole("button", { name: /record a payment/i }).click();
+  await page.getByRole("button", { name: /record a payment/i }).first().click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Amount paid").fill("50.00");
-  await dialog.getByLabel("Church").fill("Grace Community Church");
+  await dialog.getByLabel("Church", { exact: true }).fill("Grace Community Church");
   await dialog.getByLabel(/I made this payment/).check();
   await dialog.getByRole("button", { name: "Record payment" }).click();
   await expect(dialog).toBeHidden();

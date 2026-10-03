@@ -55,7 +55,7 @@ export function BalanceHero({ headline, other, summary, periodBucket, buckets, c
             10%<span className="sr-only"> tithe rate</span>
           </Badge>
         </div>
-        <p className="mt-3 md:mt-4">
+        <p className="mt-3 md:mt-4" data-testid="still-to-give-amount">
           <AnimatedAmount minor={headline.stillToGiveMinor} currency={c} size="hero" />
         </p>
         <p className="mt-3 text-label text-text-3">Everything not yet given, across all periods</p>
