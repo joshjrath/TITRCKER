@@ -21,7 +21,7 @@ import { compareByDateCreatedId } from './ordering';
 const CSV_NEEDS_QUOTING = /[",\r\n]/;
 /** Leading characters that make spreadsheets evaluate a cell (ASCII and fullwidth forms). */
 const FORMULA_TRIGGER = /^[=+\-@＝＋－＠]/;
-const CONTROL_TRIGGER = /^[\t\r]/;
+const CONTROL_TRIGGER = /^[\t\r\n]/;
 const LEADING_WHITESPACE = /^\s+/;
 const UTF8_BOM = '﻿';
 const CRLF = '\r\n';

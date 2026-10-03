@@ -59,7 +59,7 @@ const LEADING_SPACES = [' ', '  ', ' ', '　', ' ', ' ', '\n', '\u000b', '\
 
 /** True when a spreadsheet could read the cell as a formula (the property neutralisation must prevent). */
 function looksLikeFormula(cell: string): boolean {
-  if (/^[\t\r]/.test(cell)) return true;
+  if (/^[\t\r\n]/.test(cell)) return true;
   const firstVisible = cell.replace(/^\s+/, '').charAt(0);
   return TRIGGERS.includes(firstVisible);
 }
@@ -69,7 +69,7 @@ describe('neutralizeFormula', () => {
     expect(neutralizeFormula(text)).toBe(`'${text}`);
   });
 
-  it.each(['\t', '\r', '\tSalary', '\rnote', '=', '-', '－5', '@SUM(A1)'])('neutralises %j', (text) => {
+  it.each(['\t', '\r', '\n', '\nnote', '\tSalary', '\rnote', '=', '-', '－5', '@SUM(A1)'])('neutralises %j', (text) => {
     expect(neutralizeFormula(text)).toBe(`'${text}`);
   });
 
