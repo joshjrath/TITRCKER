@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AddIncomeButton } from "@/components/app";
 import { BalanceSurface, CurrencySwitch, OverviewCharts, PeriodLabel, PeriodSelect, RecentEntries } from "@/components/overview";
+import { ScriptureBand } from "@/components/scripture";
 import { PageHeader } from "@/components/shell";
 import { requireOwnerPage } from "@/server/auth/session";
 import { now } from "@/server/clock";
@@ -27,6 +28,8 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="flex flex-col gap-6 md:gap-8">
+      <ScriptureBand />
+
       <PageHeader
         title="Overview"
         periodSlot={

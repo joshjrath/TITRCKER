@@ -48,15 +48,38 @@ test("reduced motion renders the final balance immediately", async ({ page }) =>
   await page.screenshot({ path: `e2e/screenshots/${test.info().project.name}-overview-reduced-motion.png` });
 });
 
+test("Overview: Romans 8:18 stays pinned and every reload shows a different verse", async ({ page }) => {
+  await page.goto("/");
+  const pinned = page.getByTestId("pinned-verse");
+  const rotating = page.getByTestId("rotating-verse");
+  await expect(pinned).toContainText("Romans 8:18 · NLT");
+  await expect(pinned).toContainText("Yet what we suffer now is nothing compared to the glory he will reveal to us later.");
+  // The page records the verse it showed in a cookie once it has loaded; the next render then skips that verse.
+  const shownCookie = async () => (await page.context().cookies()).find((c) => c.name === "tenth-verse")?.value ?? "";
+  let previous = await rotating.locator("figcaption").innerText();
+  let recorded = "";
+  for (let i = 0; i < 3; i += 1) {
+    await expect.poll(shownCookie).not.toBe(recorded);
+    recorded = await shownCookie();
+    await page.reload();
+    await expect(pinned).toContainText("Romans 8:18");
+    const current = await rotating.locator("figcaption").innerText();
+    expect(current).toMatch(/· NLT$/);
+    expect(current).not.toBe(previous);
+    previous = current;
+  }
+});
+
 test("the balance stays put when the quick entry opens its details", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "visual-1440", "the quick entry shares the hero's row on desktop only");
   await page.goto("/");
   const amount = page.getByTestId("still-to-give-amount");
-  const before = await amount.boundingBox();
+  // Position on the page, not in the viewport: clicking may scroll the button into view.
+  const pageTop = () => amount.evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+  const before = await pageTop();
   await page.getByRole("button", { name: /add details/i }).click();
   await expect(page.getByLabel(/payer or source/i)).toBeVisible();
-  const after = await amount.boundingBox();
-  expect(after?.y).toBe(before?.y);
+  expect(await pageTop()).toBe(before);
 });
 
 test("phone: entry forms open full screen from the top, with Save in the title bar", async ({ page }, testInfo) => {

@@ -80,6 +80,17 @@ The full specification is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 - **Network:** this needs outbound HTTPS from the server, which Render allows. Tests use a pinned rate and never touch
   the network.
 
+## Bible verses
+
+The top of the Overview shows Romans 8:18, always pinned, and one more verse that changes on every visit. The extra
+verse is drawn from 37 verses about God's faithfulness, his promise never to leave us, and his promised blessing.
+A refresh never repeats the verse just shown (a small, non-sensitive cookie remembers it). The verses live in
+`src/components/scripture/verses.ts`; add or remove entries there. They are stored in the app, so nothing is fetched
+from outside.
+
+Scripture quotations are taken from the Holy Bible, New Living Translation, copyright © 1996, 2004, 2015 by Tyndale
+House Foundation. Used by permission of Tyndale House Publishers, Carol Stream, Illinois 60188. All rights reserved.
+
 ## Stack
 
 - **Next.js 16** (App Router, React 19.2, TypeScript strict)
