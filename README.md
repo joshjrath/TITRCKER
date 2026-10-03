@@ -29,7 +29,10 @@ Tenth records payments you make elsewhere. It never moves money, connects to a b
 - **Accepted amounts.** From 0.01 to 999,999,999.99. The parser is strict:
   - It accepts `1750`, `1,750.00`, `$1,750.5` and `.50`.
   - It rejects signs, scientific notation (`1e3`), more than two decimals, odd grouping (`1,75.00`) and European formats.
-- **CAD and USD are separate ledgers.** They are never added together, and no currency conversion happens.
+- **CAD and USD are separate ledgers.** Every amount keeps its own currency in the records, payments and exports. The
+  one exception is display-only: when you have USD activity, the top of the Overview shows **Total still to give in
+  CAD**, converting USD at the day's Bank of Canada rate (with a fallback). The CAD and USD amounts and the rate are
+  shown underneath (see below).
 - **Refunds and corrections** are tied to the original entry and need a reason. They can never exceed what remains of
   the entry. The tithe change is the original rounded tithe minus the rounded tithe on what remains, so a full refund
   reverses exactly the original tithe.
@@ -53,6 +56,22 @@ still to give. Set aside 100.00 and 150.00 is still owed, with 50.00 still to se
 The full specification is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ---
+
+## Combined total in CAD (live exchange rate)
+
+- **What it shows:** the Overview's top figure becomes **≈ Total still to give · in CAD** once you have USD activity.
+  It is CAD still to give plus USD still to give converted at the latest official USD→CAD rate.
+- **Where the rate comes from:** the server fetches the rate from the Bank of Canada (European Central Bank via
+  Frankfurter as a backup) and caches it in the database. It refreshes when the cached rate is more than 6 hours old,
+  so it follows each business day's published rate. No personal data is sent.
+- **Shown with it:** CAD and USD always appear separately underneath, with the rate, its source and its date. Ledger
+  and Given show the same total as a short line.
+- **What it doesn't affect:** the conversion is for display only. Payments, allocations, credits, set aside and exports
+  stay in their original currencies.
+- **If the rate services can't be reached:** the last known rate is used and labelled "last available rate". With no
+  rate at all, the app says so and shows the currencies separately.
+- **Network:** this needs outbound HTTPS from the server, which Render allows. Tests use a pinned rate and never touch
+  the network.
 
 ## Stack
 
@@ -188,6 +207,8 @@ Notes:
     `NEXT_TELEMETRY_DISABLED=1`.
   - Logs record operation names and ids only. Database errors are redacted so amounts and notes never reach the logs.
   - Amounts and notes never appear in URLs.
+  - The server makes one kind of outbound request: fetching the public USD→CAD rate, and only when you owe something in
+    USD. It sends no personal or financial data.
 - **Exports.** Downloads require you to be signed in and are never stored or emailed. CSV text fields are protected
   against spreadsheet formula injection.
 - **Encryption.**

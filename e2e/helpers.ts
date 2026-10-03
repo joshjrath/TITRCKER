@@ -31,9 +31,12 @@ export function quickEntry(page: Page): Locator {
 export async function addIncomeViaQuickEntry(
   page: Page,
   amount: string,
-  options: { expectTithe?: string; source?: string } = {},
+  options: { expectTithe?: string; source?: string; currency?: "CAD" | "USD" } = {},
 ): Promise<void> {
   const panel = quickEntry(page);
+  if (options.currency) {
+    await panel.getByRole("radio", { name: options.currency === "CAD" ? /CAD, Canadian/ : /USD, US/ }).check({ force: true });
+  }
   await panel.getByLabel("Amount received").fill(amount);
   if (options.expectTithe) await expect(panel).toContainText(options.expectTithe);
   if (options.source) {

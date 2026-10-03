@@ -2,8 +2,9 @@ import Link from "next/link";
 import { formatMoney, type BucketPosition, type PeriodSummary } from "@/domain";
 import { AddIncomeButton } from "@/components/app/AddIncomeButton";
 import { AnimatedAmount } from "@/components/motion";
+import { CombinedBreakdown, spokenCombined } from "@/components/fx";
 import { Badge, cn } from "@/components/ui";
-import type { CurrencyHeadlineVM } from "@/lib/view-models";
+import type { CombinedTotalVM, CurrencyHeadlineVM } from "@/lib/view-models";
 import { balanceNotes, overviewHref, periodStatNotes } from "./overview-text";
 import { PeriodStat } from "./PeriodStat";
 
@@ -18,6 +19,10 @@ export interface BalanceHeroProps {
   currentYear: number;
   /** Selected period key, for the other-currency link. */
   periodKey: string;
+  /** Display-only combined total in CAD (shown at the top whenever USD has activity). */
+  combined: CombinedTotalVM;
+  /** True when the USD ledger has any activity. */
+  usdActive: boolean;
 }
 
 function OtherCurrencyLine({ other, periodKey }: { other: CurrencyHeadlineVM; periodKey: string }) {
@@ -39,35 +44,66 @@ function OtherCurrencyLine({ other, periodKey }: { other: CurrencyHeadlineVM; pe
 }
 
 /** "Still to give" (all time, selected currency) with its quiet notes, then the selected period's figures. */
-export function BalanceHero({ headline, other, summary, periodBucket, buckets, currentYear, periodKey }: BalanceHeroProps) {
+export function BalanceHero({
+  headline,
+  other,
+  summary,
+  periodBucket,
+  buckets,
+  currentYear,
+  periodKey,
+  combined,
+  usdActive,
+}: BalanceHeroProps) {
   const c = headline.currency;
   const notes = balanceNotes(headline, buckets, currentYear);
   const statNotes = periodStatNotes(summary, periodBucket);
+  // With USD activity, the top figure is the combined total in CAD (display-only; ARCHITECTURE §3.10).
+  const showTotal = usdActive && combined.status !== "unavailable" && combined.totalCadMinor !== null;
+  const heroMinor = showTotal && combined.totalCadMinor !== null ? combined.totalCadMinor : headline.stillToGiveMinor;
+  const heroCurrency = showTotal ? "CAD" : c;
   return (
     <div className="flex h-full flex-col">
       {/* Desktop: the hero sits under the orbit's sweep, centred in the space above the period figures. */}
       <div className="desk:flex desk:flex-1 desk:flex-col desk:justify-center desk:pb-10 desk:pt-28">
         <div className="flex items-center gap-2">
           <h2 id="still-to-give" className="text-[0.9375rem] font-medium text-text-2">
-            Still to give
+            {showTotal ? (
+              <>
+                Total still to give <span className="text-text-3">· in CAD</span>
+              </>
+            ) : (
+              "Still to give"
+            )}
           </h2>
           <Badge tone="accent" title="Tithe rate: 10% of each entry">
             10%<span className="sr-only"> tithe rate</span>
           </Badge>
         </div>
-        <p className="mt-3 md:mt-4" data-testid="still-to-give-amount">
-          <AnimatedAmount minor={headline.stillToGiveMinor} currency={c} size="hero" />
+        <p className="mt-3 flex items-baseline gap-2 md:mt-4" data-testid="still-to-give-amount">
+          {showTotal && combined.status === "combined" ? (
+            <>
+              <span aria-hidden="true" className="text-[2rem] font-light text-text-3 md:text-[3rem]">
+                ≈
+              </span>
+              <span className="sr-only">{spokenCombined(combined)}</span>
+            </>
+          ) : null}
+          <AnimatedAmount minor={heroMinor} currency={heroCurrency} size="hero" />
         </p>
-        <p className="mt-3 text-label text-text-3">Everything not yet given, across all periods</p>
+        <p className="mt-3 text-label text-text-3">
+          {showTotal ? "Everything not yet given, across all periods and both currencies" : "Everything not yet given, across all periods"}
+        </p>
+        {usdActive ? <CombinedBreakdown combined={combined} className="mt-4" /> : null}
 
-        {notes.length > 0 || other ? (
+        {notes.length > 0 || (other && !usdActive) ? (
           <ul className="mt-4 flex flex-col gap-1.5">
             {notes.map((n) => (
               <li key={n.key} className={cn("tabular text-label", n.tone === "positive" ? "text-positive" : "text-text-2")}>
                 {n.text}
               </li>
             ))}
-            {other ? (
+            {other && !usdActive ? (
               <li>
                 <OtherCurrencyLine other={other} periodKey={periodKey} />
               </li>

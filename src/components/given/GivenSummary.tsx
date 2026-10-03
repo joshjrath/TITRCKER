@@ -3,7 +3,8 @@ import Link from "next/link";
 import { formatLocalDate, formatMoney, type Currency, type PayoutStatus } from "@/domain";
 import { AnimatedAmount } from "@/components/motion";
 import { Amount, Badge, Stat, StatRow, type BadgeTone } from "@/components/ui";
-import type { CurrencyHeadlineVM } from "@/lib/view-models";
+import { CombinedTotalLine } from "@/components/fx";
+import type { CombinedTotalVM, CurrencyHeadlineVM } from "@/lib/view-models";
 
 import { ReviewPayoutButton } from "./PaymentLauncher";
 
@@ -13,6 +14,8 @@ export interface GivenSummaryProps {
   payout: PayoutStatus;
   /** The other currency's headline when it has activity (shown compactly, never added). */
   other: CurrencyHeadlineVM | null;
+  /** Display-only combined total in CAD (ARCHITECTURE §3.10). */
+  combined?: CombinedTotalVM;
 }
 
 const phaseTone: Record<PayoutStatus["phase"], BadgeTone> = {
@@ -23,7 +26,7 @@ const phaseTone: Record<PayoutStatus["phase"], BadgeTone> = {
 };
 
 /** Still to give for the selected currency, its accrued / given figures, and the payout status block. */
-export function GivenSummary({ currency, headline, payout, other }: GivenSummaryProps) {
+export function GivenSummary({ currency, headline, payout, other, combined }: GivenSummaryProps) {
   const status = payout.perCurrency.find((p) => p.currency === currency);
   const due = status?.dueMinor ?? headline.stillToGiveMinor;
   const overdue = status?.overdueMinor ?? 0;
@@ -38,6 +41,7 @@ export function GivenSummary({ currency, headline, payout, other }: GivenSummary
         Still to give · {currency}
       </h2>
       <AnimatedAmount minor={headline.stillToGiveMinor} currency={currency} size="hero" className="mt-3 block" />
+      {combined ? <CombinedTotalLine combined={combined} className="mt-2" /> : null}
       {headline.creditMinor > 0 ? (
         <p className="mt-2 text-label text-positive">
           Credit {formatMoney(headline.creditMinor, currency)} — kept and applied to future tithe in {currency}

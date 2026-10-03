@@ -32,6 +32,8 @@ const env = {
   OWNER_SETUP_TOKEN: "e2e-setup-token-0123456789",
   TENTH_TEST_MODE: "1",
   TENTH_TEST_NOW: process.env.TENTH_TEST_NOW ?? "2026-10-03T16:00:00.000Z", // noon in Toronto
+  // Pinned USD→CAD rate so the combined total is deterministic and no test touches the network.
+  TENTH_FX_TEST_RATE: "1.3500",
 };
 
 function run(cmd, args) {

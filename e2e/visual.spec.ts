@@ -43,7 +43,8 @@ test("keyboard: the first Tab stop is the skip link and focus is visible", async
 test("reduced motion renders the final balance immediately", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await expect(page.getByText("Still to give", { exact: true })).toBeVisible();
+  // The journey leaves CAD 150.00 + USD 10.00 owed; the combined total must render at its final value at once.
+  await expect(page.getByTestId("still-to-give-amount")).toContainText("CAD 163.50");
   await page.screenshot({ path: `e2e/screenshots/${test.info().project.name}-overview-reduced-motion.png` });
 });
 

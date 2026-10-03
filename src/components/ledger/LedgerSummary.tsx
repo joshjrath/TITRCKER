@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { CombinedTotalLine } from "@/components/fx";
 import { Amount, cn } from "@/components/ui";
-import type { CurrencyHeadlineVM } from "@/lib/view-models";
+import type { CombinedTotalVM, CurrencyHeadlineVM } from "@/lib/view-models";
 import { entryCountText, type CurrencyTotals } from "./ledger-view";
 
 export interface FilteredTotalsProps {
@@ -53,10 +54,12 @@ export function FilteredTotals({ totals, shown, total, filtered, className }: Fi
 export interface AllTimeBalanceProps {
   headlines: readonly CurrencyHeadlineVM[];
   className?: string;
+  /** Display-only combined total in CAD (ARCHITECTURE §3.10). */
+  combined?: CombinedTotalVM;
 }
 
 /** The all-time amount still to give per active currency, shown apart from (and unaffected by) the filters. */
-export function AllTimeBalance({ headlines, className }: AllTimeBalanceProps) {
+export function AllTimeBalance({ headlines, combined, className }: AllTimeBalanceProps) {
   const active = headlines.filter((h) => h.hasActivity);
   if (active.length === 0) return null;
   return (
@@ -80,6 +83,7 @@ export function AllTimeBalance({ headlines, className }: AllTimeBalanceProps) {
             </li>
           ))}
         </ul>
+        {combined ? <CombinedTotalLine combined={combined} /> : null}
       </div>
       <Link
         href="/given"

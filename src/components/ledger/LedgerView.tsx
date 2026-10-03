@@ -96,7 +96,7 @@ export function LedgerView({ vm }: { vm: LedgerVM }) {
 
   return (
     <div className="flex flex-col gap-6 md:gap-8">
-      <AllTimeBalance headlines={vm.headlines} />
+      <AllTimeBalance headlines={vm.headlines} combined={vm.combined} />
 
       {vm.rows.length === 0 ? (
         <section aria-label="Income entries" className="rounded-panel border border-line bg-surface px-5 md:px-8">

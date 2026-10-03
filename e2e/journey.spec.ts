@@ -129,6 +129,19 @@ test("setting money aside leaves the amount owed unchanged", async () => {
   await expect(hero(page)).toContainText("CAD 150.00");
 });
 
+test("USD stays separate and the top shows the combined total in CAD at the day's rate", async () => {
+  await page.goto("/");
+  await addIncomeViaQuickEntry(page, "100.00", { expectTithe: "USD 10.00", source: "US client", currency: "USD" });
+  // CAD 150.00 + USD 10.00 × 1.3500 (pinned test rate) = CAD 163.50
+  await expect(hero(page)).toContainText("CAD 163.50");
+  await expect(page.getByText("Total still to give").first()).toBeVisible();
+  const breakdown = page.getByRole("definition").filter({ hasText: "USD 10.00" });
+  await expect(breakdown.first()).toContainText("CAD 13.50");
+  await expect(page.getByText(/USD→CAD 1\.3500/).first()).toBeVisible();
+  await page.goto("/ledger");
+  await expect(page.getByText("Total ≈ CAD 163.50").first()).toBeVisible();
+});
+
 test("CSV export and JSON backup reconcile with the balance and are never cached", async () => {
   const csv = await page.request.get("/api/export/csv");
   expect(csv.status()).toBe(200);

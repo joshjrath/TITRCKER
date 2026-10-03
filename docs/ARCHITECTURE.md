@@ -163,6 +163,25 @@ Let `accrued` = the sum of all obligation events and `paid` = the sum of all act
 Worked example (CAD): income 1,750.00 + 249.99 gives accrued 200.00. Give 50.00 and 150.00 is still to give. Set aside
 100.00 and still to set aside is 50.00. Still to give stays 150.00.
 
+### 3.10 Combined total in CAD (display-only; added at the owner's request)
+* The original brief kept currency conversion out of scope. The owner later asked for the total at the top in CAD,
+  "live and accurate, updated every day". The two ledgers stay independent. Payments, allocations, credits, set-aside,
+  CSV/JSON exports and every stored value remain in their original currency.
+* **Combined total** = CAD still to give + USD still to give × the day's USD→CAD rate. The USD part is rounded half-up
+  to the cent with exact BigInt math (`domain/fx.ts`). Credits are never netted across currencies.
+* The UI always labels it as converted ("Total still to give · in CAD", "≈"). CAD and USD stay visible separately
+  underneath, together with the rate, its source and its observation date.
+* **Rate source:** the Bank of Canada Valet API (official daily USD→CAD rate, published each business day), with ECB
+  reference rates via Frankfurter as a fallback. Both are free public endpoints. The server fetches them with no
+  credentials and no personal data, using a 3 s timeout and a 64 KB cap, and validates payloads strictly (bounds
+  0.5–3.0).
+* **Caching:** rates are stored in `exchange_rate`, which is public reference data with no RLS. A cached rate younger
+  than 6 hours is reused. Otherwise the providers are asked again, and only one request runs per process at a time.
+  If every provider fails, the last stored rate is used and labelled "last available rate" once it is more than
+  4 days old. With no rate at all, the UI shows the currencies separately and says the combined total is unavailable.
+  It never shows a guessed number.
+* A rate is looked up only when something is owed in USD, so a CAD-only account makes no outbound requests.
+
 ---
 
 ## 4. Dates and time

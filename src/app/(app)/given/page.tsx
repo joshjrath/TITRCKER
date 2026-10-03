@@ -44,7 +44,7 @@ export default async function GivenPage({ searchParams }: { searchParams: Search
 
         <div className="grid items-start gap-6 desk:grid-cols-12 desk:gap-8">
           <div className="desk:col-span-7">
-            <GivenSummary currency={currency} headline={headline} payout={vm.payout} other={other} />
+            <GivenSummary currency={currency} headline={headline} payout={vm.payout} other={other} combined={vm.combined} />
           </div>
           <div className="desk:col-span-5">
             <OutstandingObligations

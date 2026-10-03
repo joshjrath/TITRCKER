@@ -52,6 +52,8 @@ export function BalanceSurface({ vm }: { vm: OverviewVM }) {
               buckets={vm.buckets}
               currentYear={yearOf(vm.today)}
               periodKey={periodKey}
+              combined={vm.combined}
+              usdActive={vm.headlines.some((h) => h.currency === "USD" && h.hasActivity)}
             />
           )}
         </div>
