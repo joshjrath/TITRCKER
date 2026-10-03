@@ -4,11 +4,11 @@ import { useState, type ReactNode } from "react";
 import { Copy, Pencil, Plus, RotateCcw, Search, Trash2 } from "lucide-react";
 import type { Currency } from "@/domain";
 import { Logo, LogoMark } from "@/components/brand/Logo";
+import { AnimatedAmount } from "@/components/motion";
 import { AddActionButton, PageHeader } from "@/components/shell";
 import {
   Amount,
   AmountInput,
-  AnimatedAmount,
   Badge,
   Button,
   Checkbox,

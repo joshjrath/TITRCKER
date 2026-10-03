@@ -1,6 +1,5 @@
 export { cn } from "./cn";
 export { Amount, spokenAmount, amountSignParts, type AmountProps, type AmountSize, type AmountTone, type AmountSign } from "./Amount";
-export { AnimatedAmount, type AnimatedAmountProps } from "./AnimatedAmount";
 export { AmountInput, type AmountInputProps } from "./AmountInput";
 export { Badge, type BadgeProps, type BadgeTone } from "./Badge";
 export { Button, buttonClasses, type ButtonProps, type ButtonVariant, type ButtonSize, type ButtonStyleOptions } from "./Button";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { formatLocalDate, formatMoney, toLocalDate } from "@/domain";
+import { formatLocalDate, formatMoney } from "@/domain";
 import { useIncomeEntry } from "@/components/app/IncomeEntryProvider";
 import { Dialog } from "@/components/ui";
 import type { IncomeMutationResult, IncomeRowVM } from "@/lib/view-models";
@@ -32,7 +32,7 @@ export function IncomeEditDialog({ income, onClose, onSaved }: IncomeEditDialogP
       title="Edit income"
       description={
         income
-          ? `${formatMoney(income.amountMinor, income.currency)} received ${formatLocalDate(toLocalDate(income.receivedOn))}`
+          ? `${formatMoney(income.amountMinor, income.currency)} received ${formatLocalDate(income.receivedOn)}`
           : undefined
       }
     >
