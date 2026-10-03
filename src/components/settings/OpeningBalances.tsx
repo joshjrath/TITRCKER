@@ -79,7 +79,7 @@ export function OpeningBalances({ openings, today, defaultCurrency }: OpeningBal
           {totals.map((t, i) => (
             <span key={t.currency}>
               {i > 0 ? " · " : ""}
-              Total {t.currency}: <span className="text-text">{formatMoney(t.total, t.currency)}</span>
+              Total: <span className="text-text">{formatMoney(t.total, t.currency)}</span>
             </span>
           ))}
         </p>

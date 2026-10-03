@@ -1,11 +1,12 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId } from "react";
 import { formatLocalDate } from "@/domain";
 import { Amount, cn } from "@/components/ui";
 import type { IncomeRowVM } from "@/lib/view-models";
 import { AdjustmentList } from "./AdjustmentList";
-import { CategoryChip, FullTextPanel, FullTextToggle, HighlightBadge, RowActionsMenu, SourceText, hasHiddenText } from "./RowParts";
+import { CategoryChip, FullTextPanel, FullTextToggle, HighlightBadge, RowActionsMenu, SourceText } from "./RowParts";
+import { useRowText } from "./use-overflow";
 import type { HighlightFor, LedgerRowActions, RowHighlight } from "./row-types";
 
 export interface LedgerListProps {
@@ -16,15 +17,14 @@ export interface LedgerListProps {
 }
 
 function LedgerListItem({ row, actions, highlight }: { row: IncomeRowVM; actions: LedgerRowActions; highlight: RowHighlight | null }) {
-  const [open, setOpen] = useState(false);
+  const { sourceRef, noteRef, open, expandable, toggle } = useRowText(row.note);
   const detailId = `${useId()}-text`;
-  const showToggle = hasHiddenText(row);
   return (
     <li className={cn("border-b border-line py-3 pl-4 pr-1 last:border-b-0", highlight?.className)}>
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1 pt-0.5">
           <p className="flex min-w-0 items-center gap-2">
-            <span className="truncate text-[0.9375rem] text-text">
+            <span ref={sourceRef} className="truncate text-[0.9375rem] text-text">
               <SourceText row={row} />
             </span>
             <HighlightBadge highlight={highlight} />
@@ -45,10 +45,14 @@ function LedgerListItem({ row, actions, highlight }: { row: IncomeRowVM; actions
         <RowActionsMenu row={row} actions={actions} />
       </div>
 
-      {row.note !== null || showToggle ? (
+      {row.note !== null || expandable ? (
         <div className="mt-1 flex min-w-0 items-center gap-2 pr-3 text-xs text-text-3">
-          {row.note !== null && !open ? <span className="min-w-0 truncate">{row.note}</span> : null}
-          {showToggle ? <FullTextToggle row={row} open={open} controls={detailId} onToggle={() => setOpen((o) => !o)} /> : null}
+          {row.note !== null ? (
+            <span ref={noteRef} className={cn("min-w-0 truncate", open && "hidden")}>
+              {row.note}
+            </span>
+          ) : null}
+          {expandable ? <FullTextToggle row={row} open={open} controls={detailId} onToggle={toggle} /> : null}
         </div>
       ) : null}
       <div id={detailId} hidden={!open} className="pr-3">

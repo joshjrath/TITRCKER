@@ -6,17 +6,9 @@ import { Badge, Menu, cn } from "@/components/ui";
 import type { IncomeRowVM } from "@/lib/view-models";
 import type { LedgerRowActions, RowHighlight } from "./row-types";
 
-/** Source names longer than this get a "Show full source" disclosure (the visible text is truncated). */
-const LONG_SOURCE = 32;
-
 export function rowLabel(row: IncomeRowVM): string {
   const from = row.source ? ` from ${row.source}` : "";
   return `${formatMoney(row.amountMinor, row.currency)}${from} on ${formatLocalDate(row.receivedOn)}`;
-}
-
-/** True when the row hides text behind truncation (a note, or a long source). */
-export function hasHiddenText(row: IncomeRowVM): boolean {
-  return row.note !== null || (row.source?.length ?? 0) > LONG_SOURCE;
 }
 
 export function SourceText({ row }: { row: IncomeRowVM }) {

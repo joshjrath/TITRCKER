@@ -25,7 +25,7 @@ function ExportItem({ icon, title, children, action }: { icon: ReactNode; title:
           <p className="mt-0.5 text-label text-text-2">{children}</p>
         </div>
       </div>
-      <div className="pl-7">{action}</div>
+      <div className="pl-7 desk:mt-auto">{action}</div>
     </li>
   );
 }

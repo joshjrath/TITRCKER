@@ -22,6 +22,8 @@ export interface RefundDialogProps {
 type RefundField = "kind" | "amount" | "effectiveOn" | "reason";
 const FIELDS: readonly RefundField[] = ["kind", "amount", "effectiveOn", "reason"];
 
+const CHECK_FIELDS = "Please check the highlighted fields.";
+
 const KIND_OPTIONS: readonly { value: AdjustmentKind; label: string }[] = [
   { value: "refund", label: "Refund" },
   { value: "correction", label: "Correction" },
@@ -54,7 +56,12 @@ export function RefundDialog({ row, open, today, onClose, onSaved }: RefundDialo
   const preview = refundPreview(row, amount);
   const noun = kind === "refund" ? "refund" : "correction";
 
-  const clearError = (field: RefundField) => setErrors((e) => (e[field] ? { ...e, [field]: undefined } : e));
+  const clearError = (field: RefundField) => {
+    const remaining = { ...errors, [field]: undefined };
+    setErrors(remaining);
+    // The form-level "check the fields" note goes once every flagged field has been edited.
+    if (problem === CHECK_FIELDS && !Object.values(remaining).some(Boolean)) setProblem(null);
+  };
 
   function localErrors(): Partial<Record<RefundField, string>> {
     const out: Partial<Record<RefundField, string>> = {};
@@ -74,7 +81,7 @@ export function RefundDialog({ row, open, today, onClose, onSaved }: RefundDialo
     const found = localErrors();
     if (Object.values(found).some(Boolean)) {
       setErrors(found);
-      setProblem("Please check the highlighted fields.");
+      setProblem(CHECK_FIELDS);
       return;
     }
     const confirmed = preview;

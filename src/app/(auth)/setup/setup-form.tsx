@@ -5,7 +5,7 @@ import { useState, useTransition, type FormEvent } from "react";
 import { setupOwnerAction } from "@/server/actions/auth";
 import { OWNER_NAME_MAX_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/server/auth/policy";
 
-import { FormAlert, SubmitButton, TextField } from "../_components/auth-ui";
+import { Button, Field, InlineAlert, TextInput } from "@/components/ui";
 
 type FieldName = "token" | "email" | "name" | "password" | "confirmPassword";
 
@@ -45,50 +45,34 @@ export function SetupForm() {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4" aria-busy={pending}>
-      <FormAlert>{message}</FormAlert>
-      <TextField
-        label="Setup token"
-        name="token"
-        type="password"
-        autoComplete="off"
-        spellCheck={false}
-        required
-        error={fieldErrors.token}
-      />
-      <TextField
-        label="Owner email"
-        name="email"
-        type="email"
-        autoComplete="username"
-        spellCheck={false}
-        required
-        error={fieldErrors.email}
-        hint="Must match the OWNER_EMAIL configured for this deployment."
-      />
-      <TextField label="Your name" name="name" autoComplete="name" required maxLength={OWNER_NAME_MAX_LENGTH} error={fieldErrors.name} />
-      <TextField
+      {message ? (
+        <InlineAlert tone="danger" live="alert">
+          {message}
+        </InlineAlert>
+      ) : null}
+      <Field label="Setup token" required error={fieldErrors.token}>
+        <TextInput name="token" type="password" autoComplete="off" spellCheck={false} />
+      </Field>
+      <Field label="Owner email" required error={fieldErrors.email} hint="Must match the OWNER_EMAIL configured for this deployment.">
+        <TextInput name="email" type="email" autoComplete="username" spellCheck={false} />
+      </Field>
+      <Field label="Your name" required error={fieldErrors.name}>
+        <TextInput name="name" autoComplete="name" maxLength={OWNER_NAME_MAX_LENGTH} />
+      </Field>
+      <Field
         label="Password"
-        name="password"
-        type="password"
-        autoComplete="new-password"
         required
-        minLength={PASSWORD_MIN_LENGTH}
-        maxLength={PASSWORD_MAX_LENGTH}
         error={fieldErrors.password}
         hint={`At least ${PASSWORD_MIN_LENGTH} characters. A passphrase of several words works well.`}
-      />
-      <TextField
-        label="Confirm password"
-        name="confirmPassword"
-        type="password"
-        autoComplete="new-password"
-        required
-        maxLength={PASSWORD_MAX_LENGTH}
-        error={fieldErrors.confirmPassword}
-      />
-      <SubmitButton pending={pending} pendingLabel="Creating account…">
+      >
+        <TextInput name="password" type="password" autoComplete="new-password" minLength={PASSWORD_MIN_LENGTH} maxLength={PASSWORD_MAX_LENGTH} />
+      </Field>
+      <Field label="Confirm password" required error={fieldErrors.confirmPassword}>
+        <TextInput name="confirmPassword" type="password" autoComplete="new-password" maxLength={PASSWORD_MAX_LENGTH} />
+      </Field>
+      <Button type="submit" size="lg" fullWidth loading={pending} loadingLabel="Creating account…" className="mt-1">
         Create owner account
-      </SubmitButton>
+      </Button>
     </form>
   );
 }

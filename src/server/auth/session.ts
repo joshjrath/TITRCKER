@@ -1,6 +1,6 @@
 import "server-only";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
@@ -31,11 +31,26 @@ export async function getOwner(): Promise<OwnerContext | null> {
 }
 
 /**
+ * Request headers with the Cookie header rebuilt from `cookies()`. After a Server Action sets a cookie (Better Auth
+ * rotates the session token when two-factor is turned on/off or the password changes with "sign out other devices"),
+ * Next re-renders the page in the same request: `cookies()` already holds the new token, but `headers()` still has
+ * the old Cookie header, whose session was just deleted. Reading the session from it would bounce the owner to
+ * /sign-in.
+ */
+async function sessionHeaders(): Promise<Headers> {
+  const merged = new Headers(await headers());
+  const jar = (await cookies()).toString();
+  if (jar) merged.set("cookie", jar);
+  else merged.delete("cookie");
+  return merged;
+}
+
+/**
  * Like getOwner(), with the display name and two-factor status.
  * Memoized per server request (React cache), so a layout and page share one session lookup.
  */
 export const getOwnerProfile = cache(async (): Promise<OwnerProfile | null> => {
-  const result = await getAuth().api.getSession({ headers: await headers() });
+  const result = await getAuth().api.getSession({ headers: await sessionHeaders() });
   if (!result) return null;
   const { user } = result;
   const ownerEmail = getOwnerEmail();

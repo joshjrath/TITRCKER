@@ -6,7 +6,7 @@ import { useState, type FormEvent } from "react";
 import { authClient, retryAfterFrom, TWO_FACTOR_PATH } from "@/lib/auth-client";
 import { PASSWORD_MAX_LENGTH } from "@/server/auth/policy";
 
-import { FormAlert, SubmitButton, TextField } from "../_components/auth-ui";
+import { Button, Field, InlineAlert, TextInput } from "@/components/ui";
 
 const GENERIC_ERROR = "Email or password is incorrect.";
 
@@ -56,19 +56,20 @@ export function SignInForm() {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4" aria-busy={pending}>
-      <FormAlert>{error}</FormAlert>
-      <TextField label="Email" name="email" type="email" autoComplete="username" required autoFocus spellCheck={false} />
-      <TextField
-        label="Password"
-        name="password"
-        type="password"
-        autoComplete="current-password"
-        required
-        maxLength={PASSWORD_MAX_LENGTH}
-      />
-      <SubmitButton pending={pending} pendingLabel="Signing in…">
+      {error ? (
+        <InlineAlert tone="danger" live="alert">
+          {error}
+        </InlineAlert>
+      ) : null}
+      <Field label="Email" required>
+        <TextInput name="email" type="email" autoComplete="username" autoFocus spellCheck={false} />
+      </Field>
+      <Field label="Password" required>
+        <TextInput name="password" type="password" autoComplete="current-password" maxLength={PASSWORD_MAX_LENGTH} />
+      </Field>
+      <Button type="submit" size="lg" fullWidth loading={pending} loadingLabel="Signing in…" className="mt-1">
         Sign in
-      </SubmitButton>
+      </Button>
     </form>
   );
 }

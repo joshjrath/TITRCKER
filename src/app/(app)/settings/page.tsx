@@ -35,7 +35,6 @@ export default async function SettingsPage() {
             description="Which income counts, when you plan to give, and how dates and currencies are shown."
           >
             <TrackingForm
-              key={settings.version}
               settings={settings}
               today={vm.today}
               earliestIncomeDate={vm.earliestIncomeDate}

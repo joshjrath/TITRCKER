@@ -35,13 +35,15 @@ interface Failure {
   stale: boolean;
 }
 
+const STALE_MESSAGE =
+  "These settings were changed somewhere else, for example in another tab. Load the latest settings, then make your change again.";
 const DEFAULT_START_LABEL = formatLocalDate(toLocalDate(DEFAULT_TRACKING_START));
 const DEFAULT_PAYOUT_LABEL = formatLocalDate(toLocalDate(DEFAULT_PAYOUT_DATE));
 
 /**
  * Tracking settings: tracking start, next payout date, time zone, display currency and church name.
- * Saves with optimistic concurrency (expectedVersion). Give it `key={settings.version}` so a saved or reloaded
- * version starts a fresh form instance.
+ * Saves with optimistic concurrency (expectedVersion). When newer settings arrive from the server (another tab or
+ * device), a clean form adopts them; a form with unsaved edits keeps them and offers to load the latest instead.
  */
 export function TrackingForm({ settings, today, earliestIncomeDate, timeZones }: TrackingFormProps) {
   const router = useRouter();
@@ -56,8 +58,25 @@ export function TrackingForm({ settings, today, earliestIncomeDate, timeZones }:
   const [version, setVersion] = useState(settings.version);
   const [draft, setDraft] = useState<TrackingDraft>(saved);
   const [failure, setFailure] = useState<Failure | null>(null);
+  const [seenVersion, setSeenVersion] = useState(settings.version);
   const dirty = isTrackingDirty(draft, saved);
   useUnsavedChangesGuard(dirty, pending);
+
+  const adopt = (next: SettingsVM) => {
+    const values = draftFromSettings(next);
+    setSaved(values);
+    setDraft(values);
+    setVersion(next.version);
+  };
+
+  // Newer settings from the server (adjusting state during render, React's pattern for props that change).
+  if (settings.version !== seenVersion) {
+    setSeenVersion(settings.version);
+    if (settings.version > version) {
+      if (dirty) setFailure({ message: STALE_MESSAGE, fieldErrors: {}, stale: true });
+      else adopt(settings);
+    }
+  }
 
   const errors = failure?.fieldErrors ?? {};
   const periodLabel = currentPeriodLabel(today, draft.trackingStart, settings.trackingStart);
@@ -86,25 +105,25 @@ export function TrackingForm({ settings, today, earliestIncomeDate, timeZones }:
       if (!result.ok) {
         const stale = result.code === "stale";
         fail({
-          message: stale
-            ? "These settings were changed somewhere else, for example in another tab. Load the latest settings, then make your change again."
-            : result.message,
+          message: stale ? STALE_MESSAGE : result.message,
           fieldErrors: result.fieldErrors ?? {},
           stale,
         });
         return;
       }
       renewKey();
-      const next = draftFromSettings(result.data);
-      setSaved(next);
-      setDraft(next);
-      setVersion(result.data.version);
+      adopt(result.data);
       const period = currentPeriodLabel(today, result.data.trackingStart, result.data.trackingStart);
       toast({ title: "Settings saved", description: `Current period: ${period}.` });
     });
   };
 
-  const loadLatest = () => startRefresh(() => router.refresh());
+  // Show the newest settings this page has, and fetch fresher ones in case this page is behind too.
+  const loadLatest = () => {
+    adopt(settings);
+    setFailure(null);
+    startRefresh(() => router.refresh());
+  };
 
   return (
     <form

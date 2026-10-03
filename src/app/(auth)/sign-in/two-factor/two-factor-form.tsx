@@ -7,7 +7,7 @@ import { useState, type FormEvent } from "react";
 import { authClient, retryAfterFrom } from "@/lib/auth-client";
 import { TRUST_DEVICE_DAYS } from "@/server/auth/policy";
 
-import { FormAlert, SubmitButton, TextField } from "../../_components/auth-ui";
+import { Button, Checkbox, Field, InlineAlert, TextInput } from "@/components/ui";
 
 type Mode = "totp" | "backup";
 
@@ -85,52 +85,39 @@ export function TwoFactorForm() {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4" aria-busy={pending}>
       {error ? (
-        <FormAlert>
+        <InlineAlert tone="danger" live="alert">
           {error.message}{" "}
           {error.restart ? (
-            <Link href="/sign-in" className="font-medium underline underline-offset-4">
+            <Link href="/sign-in" className="font-medium text-text underline underline-offset-4">
               Sign in again
             </Link>
           ) : null}
-        </FormAlert>
+        </InlineAlert>
       ) : null}
 
       {mode === "totp" ? (
-        <TextField
-          key="totp"
-          label="Authentication code"
-          name="code"
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          pattern="[0-9 ]*"
-          maxLength={7}
-          required
-          autoFocus
-          hint="The 6-digit code from your authenticator app."
-        />
+        <Field key="totp" label="Authentication code" required hint="The 6-digit code from your authenticator app.">
+          <TextInput
+            name="code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            pattern="[0-9 ]*"
+            maxLength={7}
+            autoFocus
+            className="tabular text-lg tracking-[0.2em]"
+          />
+        </Field>
       ) : (
-        <TextField
-          key="backup"
-          label="Backup code"
-          name="code"
-          autoComplete="off"
-          autoCapitalize="none"
-          spellCheck={false}
-          maxLength={64}
-          required
-          autoFocus
-          hint="Each backup code works once."
-        />
+        <Field key="backup" label="Backup code" required hint="Each backup code works once.">
+          <TextInput name="code" autoComplete="off" autoCapitalize="none" spellCheck={false} maxLength={64} autoFocus className="font-mono" />
+        </Field>
       )}
 
-      <label className="flex items-center gap-2.5 text-body text-text-2">
-        <input type="checkbox" name="trustDevice" className="size-4 accent-accent" />
-        Trust this device for {TRUST_DEVICE_DAYS} days
-      </label>
+      <Checkbox name="trustDevice" label={`Trust this device for ${TRUST_DEVICE_DAYS} days`} hint="Skip the code on this browser. Only on a device you own." />
 
-      <SubmitButton pending={pending} pendingLabel="Verifying…">
+      <Button type="submit" size="lg" fullWidth loading={pending} loadingLabel="Verifying…">
         Verify
-      </SubmitButton>
+      </Button>
 
       <button
         type="button"
@@ -138,7 +125,7 @@ export function TwoFactorForm() {
           setMode(mode === "totp" ? "backup" : "totp");
           setError(null);
         }}
-        className="self-start text-label font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="min-h-11 self-center rounded-[8px] px-2 text-label font-medium text-accent underline-offset-4 hover:underline"
       >
         {mode === "totp" ? "Use a backup code instead" : "Use your authenticator app instead"}
       </button>

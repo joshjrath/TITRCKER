@@ -24,19 +24,23 @@ export function FilteredTotals({ totals, shown, total, filtered, className }: Fi
         <span className="font-normal text-text-3"> · {filtered ? "totals for this filtered view" : "totals for all entries"}</span>
       </p>
       {totals.map((t) => (
-        <p key={t.currency} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-label text-text-2">
-          {totals.length > 1 ? <span className="font-medium text-text-3">{entryCountText(t.count)} in {t.currency}:</span> : null}
-          <span className="inline-flex items-baseline gap-1">
+        <p key={t.currency} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-label text-text-2 sm:gap-x-2">
+          {totals.length > 1 ? (
+            <span className="basis-full font-medium text-text-3 sm:basis-auto">
+              {entryCountText(t.count)} in {t.currency}:
+            </span>
+          ) : null}
+          <span className="inline-flex items-baseline gap-1 whitespace-nowrap">
             <Amount minor={t.grossMinor} currency={t.currency} size="sm" className="text-text" /> received
           </span>
           {t.refundedMinor > 0 ? (
-            <span className="inline-flex items-baseline gap-1">
-              <span aria-hidden="true">·</span>
+            <span className="inline-flex items-baseline gap-1 whitespace-nowrap">
+              <span aria-hidden="true" className="max-sm:hidden">·</span>
               <Amount minor={t.refundedMinor} currency={t.currency} size="sm" /> refunded
             </span>
           ) : null}
-          <span className="inline-flex items-baseline gap-1">
-            <span aria-hidden="true">·</span>
+          <span className="inline-flex items-baseline gap-1 whitespace-nowrap">
+            <span aria-hidden="true" className="max-sm:hidden">·</span>
             <Amount minor={t.titheMinor} currency={t.currency} size="sm" tone="accent" />
             {t.refundedMinor > 0 ? "tithe after refunds" : "tithe"}
           </span>

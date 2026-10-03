@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { getOwnerSetupToken } from "@/server/auth/config";
 import { ownerExists } from "@/server/auth/owner";
 
+import { AuthHeader } from "../_components/auth-ui";
 import { SetupForm } from "./setup-form";
 
 export const metadata: Metadata = { title: "Set up Tenth" };
@@ -19,12 +20,9 @@ export default async function SetupPage() {
   if (getOwnerSetupToken() === null || (await ownerExists())) notFound();
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Set up Tenth</h1>
-        <p className="text-body text-text-2">
-          Create the owner account. You need the setup token from your deployment settings (OWNER_SETUP_TOKEN).
-        </p>
-      </header>
+      <AuthHeader title="Set up Tenth">
+        Create the owner account. You need the setup token from your deployment settings (OWNER_SETUP_TOKEN).
+      </AuthHeader>
       <SetupForm />
     </div>
   );
