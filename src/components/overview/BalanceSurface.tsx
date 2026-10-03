@@ -11,7 +11,7 @@ import { YearEndBlock } from "./YearEndBlock";
  * Desktop orbit (box = first grid row): rises from the left above the hero (which sits lower on desktop to make room),
  * crests in the top padding, clears the payout date and descends along the right edge onto the timeline's cap.
  */
-const DESK_ORBIT: Partial<OrbitGeometry> = { cx: 50, cy: 100, rx: 50, ry: 112, startDeg: 206.5, endDeg: 360 };
+const DESK_ORBIT: Partial<OrbitGeometry> = { cx: 50, cy: 100, rx: 50, ry: 108, startDeg: 206.5, endDeg: 360 };
 
 /**
  * The connected surface at the top of the Overview: hero (left 7/12 on desktop, spanning both rows), year-end

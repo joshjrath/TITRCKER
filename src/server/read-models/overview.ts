@@ -17,6 +17,7 @@ import {
 } from "@/domain";
 import type { OverviewVM, PeriodOptionVM, PeriodProgressVM } from "@/lib/view-models";
 import { withOwnerSnapshot } from "@/server/db/with-owner";
+import { combinedStillToGive } from "@/server/fx/combined";
 import type { ServiceContext } from "@/server/services/context";
 
 import { categoriesOf, currencyParam, headlinesFrom, incomeRowVM, isEmptySnapshot, loadComputedLedgerTx } from "./common";
@@ -92,5 +93,6 @@ export async function getOverview(ctx: ServiceContext, params: OverviewParams = 
     buckets: balance.buckets,
     categories: categoriesOf(snapshot),
     isEmpty: isEmptySnapshot(snapshot),
+    combined: await combinedStillToGive(balances, ctx.now),
   };
 }

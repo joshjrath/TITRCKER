@@ -31,9 +31,6 @@ export function SetAsideCurrencySection({ data }: { data: SetAsideCurrencyVM }) 
           sublabel={stillToSetAsideNote(data)}
         />
       </StatRow>
-      <p className="max-w-prose text-label text-text-2">
-        Setting money aside doesn&apos;t change what you owe — it&apos;s your own record of money you&apos;ve reserved.
-      </p>
 
       <div className="flex flex-col gap-2">
         <h3 className="text-[0.9375rem] font-medium text-text">

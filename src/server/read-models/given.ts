@@ -6,6 +6,7 @@ import { computePayoutStatus, CURRENCIES, subMinor, sumMinor, toMinor, type Buck
 import type { GivenVM, PaymentVM } from "@/lib/view-models";
 import { churchPayment, paymentAllocation, setAsideEntry } from "@/server/db/schema";
 import { withOwnerSnapshot, type OwnerTx } from "@/server/db/with-owner";
+import { combinedStillToGive } from "@/server/fx/combined";
 import type { ServiceContext } from "@/server/services/context";
 import { groupAllocations, isoOrNull, paymentRecordFromRow, type PaymentRow, type SetAsideRow } from "@/server/services/records";
 
@@ -70,13 +71,13 @@ export async function loadPaymentVMs(tx: OwnerTx, ownerId: string): Promise<Paym
 
 /** The Given page: payout status, balances and outstanding buckets per currency, and the payment history. */
 export async function getGiven(ctx: ServiceContext, params: GivenParams = {}): Promise<GivenVM> {
-  return withOwnerSnapshot(ctx.ownerId, async (tx) => {
+  const { vm, balances } = await withOwnerSnapshot(ctx.ownerId, async (tx) => {
     const ledger = await loadComputedLedgerTx(tx, ctx);
     const payments = await loadPaymentVMs(tx, ctx.ownerId);
     const bucketsByCurrency = Object.fromEntries(
       CURRENCIES.map((c) => [c, ledger.balances[c].buckets]),
     ) as Record<Currency, BucketPosition[]>;
-    return {
+    const base: Omit<GivenVM, "combined"> = {
       today: ledger.today,
       settings: ledger.settings,
       currency: currencyParam(params.currency, ledger.tracking.displayCurrency),
@@ -91,5 +92,8 @@ export async function getGiven(ctx: ServiceContext, params: GivenParams = {}): P
       bucketsByCurrency,
       payments,
     };
+    return { vm: base, balances: ledger.balances };
   });
+  // The exchange-rate lookup may hit the network, so it runs after the read transaction has finished.
+  return { ...vm, combined: await combinedStillToGive(balances, ctx.now) };
 }

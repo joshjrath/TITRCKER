@@ -45,7 +45,7 @@ export function GivenSummary({ currency, headline, payout, other }: GivenSummary
       ) : null}
 
       <StatRow className="mt-6">
-        <Stat label="Tithe accrued" minor={headline.accruedMinor} currency={currency} size="md" sublabel="All time, 10% of each entry" />
+        <Stat label="Tithe accrued" minor={headline.accruedMinor} currency={currency} size="md" sublabel="All time, including opening balances" />
         <Stat label="Given" minor={headline.paidMinor} currency={currency} size="md" sublabel="Payments recorded, all time" />
         <Stat label="Set aside" minor={headline.setAsideMinor} currency={currency} size="md" sublabel="Your own reserve record" />
       </StatRow>

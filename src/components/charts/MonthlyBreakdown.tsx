@@ -104,7 +104,7 @@ export function MonthlyBreakdown({
                 Tithe<span className={styles.srOnly}> ({currency})</span>
               </th>
               <th scope="col">
-                Paid<span className={styles.srOnly}> ({currency})</span>
+                Given<span className={styles.srOnly}> ({currency})</span>
               </th>
             </tr>
           </thead>

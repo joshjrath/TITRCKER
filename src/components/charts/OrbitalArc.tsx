@@ -1,6 +1,5 @@
 import { useId } from 'react';
 import styles from './charts.module.css';
-import { pct } from './geometry';
 import { COMPACT_ORBIT, DEFAULT_ORBIT, orbitModel, type OrbitGeometry } from './orbit';
 
 export interface OrbitalArcProps {
@@ -23,6 +22,14 @@ export interface OrbitalArcProps {
   className?: string;
 }
 
+/**
+ * Box coordinate (0..100) as a percentage of the outer SVG. Not clamped: the ellipse may crest above
+ * or beyond its box (the paths overflow visibly), and the circles must stay on those paths.
+ */
+function boxPct(v: number): string {
+  return `${Math.round(v * 1000) / 1000}%`;
+}
+
 interface OrbitSvgProps {
   id: string;
   g: OrbitGeometry;
@@ -40,7 +47,7 @@ function OrbitSvg({ id, g, progress, isEmpty, className }: OrbitSvgProps) {
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" width="100%" height="100%" overflow="visible">
         <defs>
           <linearGradient id={doneId} gradientUnits="userSpaceOnUse" x1={m.start.x} y1={0} x2={m.marker.x} y2={0}>
-            <stop offset="0" className={styles.stopAccent} stopOpacity={0.08} />
+            <stop offset="0" className={styles.stopAccent} stopOpacity={0.14} />
             <stop offset="0.7" className={styles.stopAccent} stopOpacity={0.38} />
             <stop offset="1" className={styles.stopAccent} stopOpacity={0.85} />
           </linearGradient>
@@ -65,18 +72,18 @@ function OrbitSvg({ id, g, progress, isEmpty, className }: OrbitSvgProps) {
       </svg>
 
       {/* Payout node (copper). Circles sit in the outer, unscaled coordinate space so they stay round. */}
-      <circle cx={pct(m.end.x / 100)} cy={pct(m.end.y / 100)} r={6} className={styles.orbitEndRing} />
+      <circle cx={boxPct(m.end.x)} cy={boxPct(m.end.y)} r={6} className={styles.orbitEndRing} />
       <circle
-        cx={pct(m.end.x / 100)}
-        cy={pct(m.end.y / 100)}
+        cx={boxPct(m.end.x)}
+        cy={boxPct(m.end.y)}
         r={2.75}
         className={isEmpty ? styles.orbitEndDotMuted : styles.orbitEndDot}
       />
 
       {!isEmpty && (
         <>
-          <circle cx={pct(m.marker.x / 100)} cy={pct(m.marker.y / 100)} r={8} className={styles.orbitMarkerHalo} />
-          <circle cx={pct(m.marker.x / 100)} cy={pct(m.marker.y / 100)} r={3.5} className={styles.orbitMarker} />
+          <circle cx={boxPct(m.marker.x)} cy={boxPct(m.marker.y)} r={8} className={styles.orbitMarkerHalo} />
+          <circle cx={boxPct(m.marker.x)} cy={boxPct(m.marker.y)} r={3.5} className={styles.orbitMarker} />
         </>
       )}
     </svg>

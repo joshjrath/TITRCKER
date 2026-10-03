@@ -14,13 +14,23 @@ export interface StatProps {
   className?: string;
 }
 
-/** Label + Amount + optional sublabel. Group several in <StatRow>, separated by hairlines rather than boxes. */
+/**
+ * Label + Amount + optional sublabel. Group several in <StatRow>, separated by hairlines rather than boxes.
+ * Phones: a compact "label ··· amount" row with the sublabel underneath. From 640px: label over figure.
+ */
 export function Stat({ label, minor, currency, size = "lg", tone, sublabel, className }: StatProps) {
   return (
-    <div className={cn("flex min-w-0 flex-col gap-1.5", className)}>
+    <div
+      className={cn(
+        "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-1 sm:flex sm:flex-col sm:gap-1.5",
+        className,
+      )}
+    >
       <p className="text-label text-text-2">{label}</p>
-      <Amount minor={minor} currency={currency} size={size} tone={tone} />
-      {sublabel ? <p className="text-xs text-text-3">{sublabel}</p> : null}
+      <div className="text-right sm:text-left">
+        <Amount minor={minor} currency={currency} size={size} tone={tone} />
+      </div>
+      {sublabel ? <p className="col-span-2 text-xs text-text-3">{sublabel}</p> : null}
     </div>
   );
 }
@@ -30,8 +40,8 @@ export function StatRow({ children, className }: { children: ReactNode; classNam
   return (
     <div
       className={cn(
-        "grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-0",
-        "max-sm:divide-y max-sm:divide-line max-sm:*:pt-4 max-sm:[&>*:first-child]:pt-0",
+        "grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-0",
+        "max-sm:divide-y max-sm:divide-line max-sm:*:pt-3 max-sm:[&>*:first-child]:pt-0",
         "sm:divide-x sm:divide-line sm:*:px-6 sm:[&>*:first-child]:pl-0 sm:[&>*:last-child]:pr-0",
         className,
       )}

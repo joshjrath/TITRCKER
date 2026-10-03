@@ -49,6 +49,32 @@ export const appRateLimit = pgTable("app_rate_limit", {
   count: integer("count").notNull(),
 });
 
+export const FX_SOURCES = ["bank_of_canada", "ecb_frankfurter"] as const;
+
+/**
+ * Cached public USD→CAD reference rates (see src/server/fx). Display-only input for the combined CAD total; never
+ * used in ledger math. Public data, so no owner column and no RLS.
+ */
+export const exchangeRate = pgTable(
+  "exchange_rate",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    base: text("base").notNull(),
+    quote: text("quote").notNull(),
+    rate: text("rate").notNull(),
+    observedOn: date("observed_on", { mode: "string" }).notNull(),
+    source: text("source").notNull(),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    unique("exchange_rate_pair_day_source").on(t.base, t.quote, t.observedOn, t.source),
+    index("exchange_rate_latest_idx").on(t.base, t.quote, t.observedOn, t.fetchedAt),
+    check("exchange_rate_pair_check", sql`${t.base} = 'USD' AND ${t.quote} = 'CAD'`),
+    check("exchange_rate_rate_format", sql`${t.rate} ~ '^[0-9]{1,2}\\.[0-9]{1,8}$'`),
+    check("exchange_rate_source_check", sql`${t.source} IN ('bank_of_canada', 'ecb_frankfurter')`),
+  ],
+);
+
 // ---------------------------------------------------------------------------------------------
 // APPLICATION TABLES (owner data, RLS forced) — added by the data workstream below this line.
 // See docs/ARCHITECTURE.md §5.

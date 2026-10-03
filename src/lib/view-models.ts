@@ -75,6 +75,27 @@ export interface CurrencyHeadlineVM {
   hasActivity: boolean;
 }
 
+/**
+ * The combined "Total still to give in CAD" (display-only; ARCHITECTURE §3.10). CAD and USD stay separate everywhere
+ * else; only per-currency still-to-give is converted, at the day's published USD→CAD rate.
+ */
+export interface CombinedTotalVM {
+  /** cad_only: nothing owed in USD; combined: USD converted; unavailable: USD owed but no rate could be obtained. */
+  status: "cad_only" | "combined" | "unavailable";
+  /** CAD still to give plus converted USD still to give (null when unavailable). */
+  totalCadMinor: Minor | null;
+  cadMinor: Minor;
+  usdMinor: Minor;
+  usdInCadMinor: Minor | null;
+  rate: {
+    value: string;
+    observedOn: LocalDate;
+    sourceLabel: string;
+    /** The newest rate is older than expected (providers unreachable); shown as "last available rate". */
+    stale: boolean;
+  } | null;
+}
+
 export interface PeriodOptionVM {
   /** 'YYYY' or 'all'. */
   key: string;
@@ -112,6 +133,8 @@ export interface OverviewVM {
   categories: string[];
   /** No records at all. */
   isEmpty: boolean;
+  /** Combined "Total still to give in CAD" (display-only). */
+  combined: CombinedTotalVM;
 }
 
 /** Defaults for the income entry form, loaded once by the (app) layout. */
@@ -133,6 +156,7 @@ export interface LedgerVM {
   rows: IncomeRowVM[];
   headlines: CurrencyHeadlineVM[];
   categories: string[];
+  combined: CombinedTotalVM;
 }
 
 export interface PaymentAllocationVM {
@@ -167,6 +191,7 @@ export interface GivenVM {
   bucketsByCurrency: Record<Currency, BucketPosition[]>;
   /** Newest first, including reversed payments (flagged by reversedAt). */
   payments: PaymentVM[];
+  combined: CombinedTotalVM;
 }
 
 export interface SetAsideEntryVM {

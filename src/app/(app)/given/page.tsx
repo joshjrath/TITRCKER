@@ -7,7 +7,6 @@ import { paymentContextFromGiven } from "@/components/given/payment-context";
 import { PaymentHistory } from "@/components/given/PaymentHistory";
 import { PaymentLauncher, RecordPaymentButton } from "@/components/given/PaymentLauncher";
 import { PageHeader } from "@/components/shell";
-import { InlineAlert } from "@/components/ui";
 import { requireOwnerPage } from "@/server/auth/session";
 import { now } from "@/server/clock";
 import { getGiven } from "@/server/read-models/given";
@@ -36,16 +35,12 @@ export default async function GivenPage({ searchParams }: { searchParams: Search
   return (
     <PaymentLauncher context={paymentContextFromGiven(vm)} openPayoutOnLoad={single(params.review) === "payout"}>
       <div className="flex flex-col gap-6 md:gap-8">
-        <div className="flex flex-col gap-4">
-          <PageHeader
-            title="Given"
-            currencySlot={active.length > 1 ? <CurrencySwitch value={currency} basePath="/given" /> : undefined}
-            actionSlot={<RecordPaymentButton />}
-          />
-          <InlineAlert tone="info" className="max-w-3xl">
-            Tenth records payments you made to your church elsewhere. It never moves money or contacts your bank.
-          </InlineAlert>
-        </div>
+        <PageHeader
+          title="Given"
+          description="Payments you made to your church elsewhere. Tenth only keeps the record — it never moves money or contacts your bank."
+          currencySlot={active.length > 1 ? <CurrencySwitch value={currency} basePath="/given" /> : undefined}
+          actionSlot={<RecordPaymentButton />}
+        />
 
         <div className="grid items-start gap-6 desk:grid-cols-12 desk:gap-8">
           <div className="desk:col-span-7">

@@ -3,6 +3,7 @@ import "server-only";
 import { buildLedgerRows } from "@/domain";
 import type { LedgerVM } from "@/lib/view-models";
 import { withOwnerSnapshot } from "@/server/db/with-owner";
+import { combinedStillToGive } from "@/server/fx/combined";
 import type { ServiceContext } from "@/server/services/context";
 
 import { categoriesOf, headlinesFrom, incomeRowVM, loadComputedLedgerTx } from "./common";
@@ -19,5 +20,6 @@ export async function getLedger(ctx: ServiceContext): Promise<LedgerVM> {
     rows: buildLedgerRows(snapshot).map(incomeRowVM),
     headlines: headlinesFrom(balances, today),
     categories: categoriesOf(snapshot),
+    combined: await combinedStillToGive(balances, ctx.now),
   };
 }
