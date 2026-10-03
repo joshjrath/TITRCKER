@@ -59,6 +59,57 @@ test("the balance stays put when the quick entry opens its details", async ({ pa
   expect(after?.y).toBe(before?.y);
 });
 
+test("phone keyboard: the add-income sheet rests on the keyboard with Save visible", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "visual-390", "phone layout only");
+  // Chromium has no on-screen keyboard, so emulate how iOS Safari reports one: the layout viewport keeps its height
+  // while window.visualViewport shrinks (and may be panned down the page).
+  await page.addInitScript(() => {
+    const fake = Object.assign(new EventTarget(), {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      offsetTop: 0,
+      offsetLeft: 0,
+      pageTop: 0,
+      pageLeft: 0,
+      scale: 1,
+    });
+    Object.defineProperty(window, "visualViewport", { configurable: true, get: () => fake });
+    (window as unknown as { __setKeyboard: (height: number, offsetTop: number) => void }).__setKeyboard = (height, offsetTop) => {
+      fake.height = height;
+      fake.offsetTop = offsetTop;
+      fake.dispatchEvent(new Event("resize"));
+    };
+  });
+  await page.goto("/");
+  await page.getByRole("navigation").getByRole("button", { name: /add/i }).last().click();
+  const sheet = page.getByRole("dialog", { name: "Add income" });
+  await expect(sheet).toBeVisible();
+
+  for (const [height, offsetTop] of [
+    [508, 0],
+    [508, 120],
+  ] as const) {
+    await page.evaluate(
+      ({ h, o }) => (window as unknown as { __setKeyboard: (h: number, o: number) => void }).__setKeyboard(h, o),
+      { h: height, o: offsetTop },
+    );
+    const visibleBottom = offsetTop + height;
+    await expect
+      .poll(async () => {
+        const box = await sheet.boundingBox();
+        return box ? Math.round(box.y + box.height) : -1;
+      })
+      .toBe(visibleBottom);
+    const box = await sheet.boundingBox();
+    expect(box!.y).toBeGreaterThanOrEqual(offsetTop);
+    const save = await sheet.getByRole("button", { name: "Save income" }).boundingBox();
+    expect(save!.y + save!.height).toBeLessThanOrEqual(visibleBottom);
+    const amount = await sheet.getByLabel("Amount received").boundingBox();
+    expect(amount!.y).toBeGreaterThanOrEqual(box!.y);
+    await page.screenshot({ path: `e2e/screenshots/${testInfo.project.name}-sheet-keyboard-${offsetTop}.png` });
+  }
+});
+
 test.describe("signed out", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 

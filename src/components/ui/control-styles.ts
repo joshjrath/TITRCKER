@@ -6,7 +6,11 @@ export const controlBase =
   "aria-invalid:border-danger aria-invalid:hover:border-danger " +
   "disabled:cursor-not-allowed disabled:opacity-50 [&:is(input,textarea):read-only]:bg-surface";
 
+/**
+ * Phones get 16px text in every field: iOS Safari zooms the whole page when focusing a field smaller than 16px.
+ * From the md breakpoint the denser desktop sizes apply.
+ */
 export const controlSize = {
-  sm: "h-11 px-3 text-[0.9375rem] md:h-9 md:text-label",
-  md: "h-11 px-3 text-[0.9375rem]",
+  sm: "h-11 px-3 text-base md:h-9 md:text-label",
+  md: "h-11 px-3 text-base md:text-[0.9375rem]",
 } as const;

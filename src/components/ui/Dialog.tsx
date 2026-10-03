@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useRef, type MouseEvent, type ReactNode,
 import { X } from "lucide-react";
 import { cn } from "./cn";
 import { IconButton } from "./IconButton";
+import { useSheetViewport } from "./sheet-viewport";
 
 export interface DialogProps {
   open: boolean;
@@ -55,6 +56,8 @@ function DialogBase({
   const pointerDownOnBackdrop = useRef(false);
   const titleId = useId();
   const descId = useId();
+  // Keep the dialog inside the visible area when an on-screen keyboard is up (see sheet-viewport.ts).
+  useSheetViewport(ref, open);
 
   // Keep the latest callbacks without re-running the open/close effect.
   const onCloseRef = useRef(onClose);
@@ -145,14 +148,18 @@ function DialogBase({
                 {title}
               </h2>
               {description ? (
-                <p id={descId} className="mt-1 text-[0.875rem] text-text-2">
+                <p id={descId} data-sheet-description className="mt-1 text-[0.875rem] text-text-2">
                   {description}
                 </p>
               ) : null}
             </div>
             <IconButton aria-label={closeLabel} icon={<X />} onClick={requestClose} className="-mr-2 -mt-1" />
           </header>
-          <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
+          <div
+            ref={bodyRef}
+            data-dialog-body
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 pt-4 sm:px-6 sm:pb-6"
+          >
             {children}
           </div>
           {footer ? (

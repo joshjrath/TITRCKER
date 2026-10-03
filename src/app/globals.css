@@ -384,8 +384,10 @@
 
 .tenth-dialog {
   margin: auto;
+  /* Centered in the VISIBLE area: --sheet-bottom / --sheet-height track the on-screen keyboard (sheet-viewport.ts). */
+  inset: 0 0 var(--sheet-bottom, 0px) 0;
   width: min(100% - 32px, 560px);
-  max-height: min(100dvh - 48px, 880px);
+  max-height: min(var(--sheet-height, 100dvh) - 48px, 880px);
   border-radius: var(--radius-panel-lg);
   background: var(--surface-raised);
   border: 1px solid var(--line-strong);
@@ -407,13 +409,19 @@
   width: min(100% - 32px, 720px);
 }
 
-/* Bottom sheet below 640px, centered dialog above. */
+/*
+ * Bottom sheet below 640px, centered dialog above.
+ * The sheet rests on the top edge of the VISIBLE area: --sheet-bottom / --sheet-height come from the
+ * VisualViewport (src/components/ui/sheet-viewport.ts), because iOS Safari keeps the layout viewport full height
+ * while the keyboard covers its lower part. Without JS it falls back to the bottom of the screen.
+ */
 @media (width < 640px) {
   .tenth-dialog[data-variant="sheet"] {
-    margin: auto 0 0;
+    margin: 0;
+    inset: auto 0 var(--sheet-bottom, 0px) 0;
     width: 100%;
     max-width: 100%;
-    max-height: calc(100dvh - 24px);
+    max-height: calc(var(--sheet-height, 100dvh) - 12px);
     border-radius: var(--radius-panel-lg) var(--radius-panel-lg) 0 0;
     border-bottom: 0;
     padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -421,6 +429,32 @@
 
   .tenth-dialog[data-variant="sheet"][open] {
     animation: tenth-sheet-up 220ms var(--ease-out-soft) both;
+  }
+
+  /* Keyboard up: the sheet sits on it, so drop the home-indicator padding and the decorative extras. */
+  .tenth-dialog[data-variant="sheet"][data-keyboard="open"] {
+    padding-bottom: 0;
+  }
+  .tenth-dialog[data-variant="sheet"][data-keyboard="open"] [data-sheet-handle],
+  .tenth-dialog[data-variant="sheet"][data-keyboard="open"] [data-sheet-description] {
+    display: none;
+  }
+
+  /* Fields scrolled into view keep a little room around their focus ring. */
+  .tenth-dialog[data-variant="sheet"] [data-dialog-body] {
+    scroll-padding-block: 16px;
+    padding-bottom: 0;
+  }
+
+  /* The form's main button stays visible at the bottom of the sheet, right above the keyboard. */
+  .tenth-dialog[data-variant="sheet"] [data-sticky-submit] {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin-inline: -1.25rem;
+    padding: 0.75rem 1.25rem 1rem;
+    background: var(--surface-raised);
+    border-top: 1px solid var(--line);
   }
 }
 

@@ -251,9 +251,12 @@ export function IncomeForm({ mode, initial, defaults, onSaved, onDirtyChange, co
         </InlineAlert>
       ) : null}
 
-      <Button type="submit" size={compact ? "md" : "lg"} fullWidth loading={pending} loadingLabel="Saving…">
-        {mode === "edit" ? "Save changes" : "Save income"}
-      </Button>
+      {/* In a phone sheet this row sticks to the bottom so Save stays visible above the keyboard. */}
+      <div data-sticky-submit>
+        <Button type="submit" size={compact ? "md" : "lg"} fullWidth loading={pending} loadingLabel="Saving…">
+          {mode === "edit" ? "Save changes" : "Save income"}
+        </Button>
+      </div>
     </form>
   );
 }
