@@ -81,14 +81,46 @@ test("phone: entry forms open full screen from the top, with Save in the title b
   expect(saveBox.y + saveBox.height).toBeLessThan(140);
   const amountBox = (await sheet.getByLabel("Amount received").boundingBox())!;
   expect(amountBox.y + amountBox.height).toBeLessThan(keyboardTop);
-  // The form's own bottom button is replaced by the title-bar one on phones.
-  await expect(sheet.getByRole("button", { name: "Save income" })).toBeHidden();
+  // The title bar stays one line tall (the description scrolls with the form).
+  expect(((await sheet.locator("header").boundingBox())!).height).toBeLessThan(80);
   await page.screenshot({ path: `e2e/screenshots/${testInfo.project.name}-add-income-sheet.png` });
+
+  // Focusing a lower field scrolls the sheet body so the field sits above the keyboard. Otherwise iOS pans the whole
+  // screen to reveal it, which slides the fixed sheet (and its title-bar Save) off the top.
+  await sheet.getByLabel(/category/i).focus();
+  const category = (await sheet.getByLabel(/category/i).boundingBox())!;
+  expect(category.y + category.height).toBeLessThan(keyboardTop);
+  expect(category.y).toBeGreaterThan(((await save.boundingBox())!).y);
+  await sheet.getByLabel(/note/i).focus();
+  const note = (await sheet.getByLabel(/note/i).boundingBox())!;
+  expect(note.y + note.height).toBeLessThan(keyboardTop);
+  // The form's own Save stays too, right below the last field.
+  await expect(sheet.getByRole("button", { name: "Save income" })).toBeVisible();
 
   // The title-bar Save submits the form (empty amount → the field's validation message, nothing saved).
   await save.click();
   await expect(sheet.getByText(/enter an amount/i).first()).toBeVisible();
+  await expect(sheet.getByLabel("Amount received")).toBeFocused();
   await sheet.getByRole("button", { name: "Close" }).click();
+  await expect(sheet).toBeHidden();
+
+  // Editing an entry uses the same full-screen layout.
+  await page.goto("/ledger");
+  await page.getByRole("button", { name: /^Actions for/ }).first().click();
+  await page.getByRole("menuitem", { name: "Edit" }).click();
+  const edit = page.getByRole("dialog", { name: "Edit income" });
+  await expect.poll(async () => Math.round((await edit.boundingBox())?.y ?? -1)).toBe(0);
+  expect(((await edit.getByRole("button", { name: "Save", exact: true }).boundingBox())!).y).toBeLessThan(140);
+  await edit.getByRole("button", { name: "Close" }).click();
+  await expect(edit).toBeHidden();
+
+  // Centered confirmations sit near the top, so their buttons stay clear of the keyboard.
+  await page.getByRole("button", { name: /^Actions for/ }).first().click();
+  await page.getByRole("menuitem", { name: "Delete" }).click();
+  const confirm = page.getByRole("dialog", { name: /delete/i });
+  await expect.poll(async () => Math.round((await confirm.boundingBox())?.y ?? -1)).toBeLessThan(60);
+  await confirm.getByRole("button", { name: "Close" }).click();
+  await expect(confirm).toBeHidden();
 
   await page.goto("/given");
   await page.getByRole("button", { name: /record a payment/i }).first().click();

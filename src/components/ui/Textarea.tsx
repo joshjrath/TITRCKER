@@ -35,7 +35,7 @@ export function Textarea({ invalid, showCount, maxLength, className, onChange, r
         {...wiring}
         aria-describedby={counting ? [wiring["aria-describedby"], countId].filter(Boolean).join(" ") : wiring["aria-describedby"]}
         onChange={handleChange}
-        className={cn(controlBase, "min-h-[5.5rem] resize-y px-3 py-2.5 text-base leading-6 md:text-[0.9375rem]", className)}
+        className={cn(controlBase, "min-h-[5.5rem] resize-y px-3 py-2.5 text-base leading-6 md-fine:text-[0.9375rem]", className)}
       />
       {counting ? (
         <p id={countId} className={cn("tabular self-end text-xs", near ? "text-copper" : "text-text-3")}>

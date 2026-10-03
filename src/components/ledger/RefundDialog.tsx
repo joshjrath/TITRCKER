@@ -1,8 +1,8 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { formatLocalDate, formatMoney, type AdjustmentKind } from "@/domain";
-import { AmountInput, Button, DateInput, Dialog, Field, InlineAlert, SegmentedControl, TextInput, useToast } from "@/components/ui";
+import { AmountInput, Button, DateInput, Field, InlineAlert, SegmentedControl, Sheet, TextInput, useToast } from "@/components/ui";
 import { TEXT_LIMITS, adjustmentCreateSchema, parseWith } from "@/lib/validation";
 import type { IncomeRowVM } from "@/lib/view-models";
 import { createAdjustmentAction } from "@/server/actions/income";
@@ -41,6 +41,7 @@ const KIND_HELP: Record<AdjustmentKind, string> = {
 export function RefundDialog({ row, open, today, onClose, onSaved }: RefundDialogProps) {
   const formId = useId();
   const previewId = `${formId}-preview`;
+  const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
   const [idempotencyKey, renewKey] = useIdempotencyKey();
   const [pending, run] = useSubmitLock();
@@ -63,6 +64,15 @@ export function RefundDialog({ row, open, today, onClose, onSaved }: RefundDialo
     if (problem === CHECK_FIELDS && !Object.values(remaining).some(Boolean)) setProblem(null);
   };
 
+  /** After a failed save: focus the first invalid field, else the form-level message (scrolls it into view). */
+  const focusProblem = () =>
+    requestAnimationFrame(() => {
+      const form = formRef.current;
+      const target =
+        form?.querySelector<HTMLElement>('[aria-invalid="true"]') ?? form?.querySelector<HTMLElement>("[data-form-error]");
+      target?.focus();
+    });
+
   function localErrors(): Partial<Record<RefundField, string>> {
     const out: Partial<Record<RefundField, string>> = {};
     const check = parseWith(adjustmentCreateSchema, { idempotencyKey, incomeId: row.id, kind, amount, effectiveOn, reason });
@@ -82,6 +92,7 @@ export function RefundDialog({ row, open, today, onClose, onSaved }: RefundDialo
     if (Object.values(found).some(Boolean)) {
       setErrors(found);
       setProblem(CHECK_FIELDS);
+      focusProblem();
       return;
     }
     const confirmed = preview;
@@ -89,6 +100,7 @@ export function RefundDialog({ row, open, today, onClose, onSaved }: RefundDialo
     if (result === undefined) return; // already submitting
     if (result === null) {
       setProblem(CONNECTION_PROBLEM);
+      focusProblem();
       return;
     }
     if (!result.ok) {
@@ -100,6 +112,7 @@ export function RefundDialog({ row, open, today, onClose, onSaved }: RefundDialo
       }
       setErrors(fieldErrors);
       setProblem([result.message, ...other.filter((m) => m !== result.message)].join(" "));
+      focusProblem();
       return;
     }
     renewKey();
@@ -119,12 +132,17 @@ export function RefundDialog({ row, open, today, onClose, onSaved }: RefundDialo
   }
 
   return (
-    <Dialog
+    <Sheet
       open={open}
       onClose={onClose}
       onRequestClose={guard}
       title="Refund or correction"
       description={`${formatMoney(row.amountMinor, row.currency)}${row.source ? ` from ${row.source}` : ""}, received ${formatLocalDate(row.receivedOn)}.`}
+      phoneAction={
+        <Button type="submit" form={formId} size="sm" loading={pending} loadingLabel="Saving…">
+          Record
+        </Button>
+      }
       footer={
         <>
           <Button variant="ghost" onClick={() => guard() && onClose()} disabled={pending}>
@@ -137,6 +155,7 @@ export function RefundDialog({ row, open, today, onClose, onSaved }: RefundDialo
       }
     >
       <form
+        ref={formRef}
         id={formId}
         noValidate
         aria-busy={pending || undefined}
@@ -208,11 +227,13 @@ export function RefundDialog({ row, open, today, onClose, onSaved }: RefundDialo
         <RefundPreviewLine id={previewId} row={row} preview={preview} />
 
         {problem ? (
-          <InlineAlert tone="danger" live="alert">
-            {problem}
-          </InlineAlert>
+          <div data-form-error tabIndex={-1} className="outline-none">
+            <InlineAlert tone="danger" live="alert">
+              {problem}
+            </InlineAlert>
+          </div>
         ) : null}
       </form>
-    </Dialog>
+    </Sheet>
   );
 }

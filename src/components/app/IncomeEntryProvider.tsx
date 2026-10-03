@@ -59,12 +59,18 @@ export function IncomeEntryProvider({ defaults, children }: IncomeEntryProviderP
   const formElementId = useId();
   const [lastSaved, setLastSaved] = useState<LastSavedIncome | null>(null);
   const dirtyRef = useRef(false);
+  const savingRef = useRef(false);
   const tokenRef = useRef(0);
 
   const openAddIncome = useCallback(() => {
     dirtyRef.current = false;
     setFormKey((k) => k + 1);
     setOpen(true);
+  }, []);
+
+  const onPendingChange = useCallback((pending: boolean) => {
+    savingRef.current = pending;
+    setSaving(pending);
   }, []);
 
   const reportSaved = useCallback(
@@ -87,7 +93,8 @@ export function IncomeEntryProvider({ defaults, children }: IncomeEntryProviderP
       <Sheet
         open={open}
         onClose={() => setOpen(false)}
-        onRequestClose={() => !dirtyRef.current || window.confirm(DISCARD_PROMPT)}
+        // Stay open while a save is in flight; the result (toast or error) belongs to this form.
+        onRequestClose={() => !savingRef.current && (!dirtyRef.current || window.confirm(DISCARD_PROMPT))}
         title="Add income"
         description="Enter money you received. Tenth adds 10% to what you still have to give."
         phoneAction={
@@ -101,8 +108,7 @@ export function IncomeEntryProvider({ defaults, children }: IncomeEntryProviderP
           id={formElementId}
           mode="create"
           defaults={defaults}
-          inlineSubmit="desktop"
-          onPendingChange={setSaving}
+          onPendingChange={onPendingChange}
           onDirtyChange={(dirty) => {
             dirtyRef.current = dirty;
           }}

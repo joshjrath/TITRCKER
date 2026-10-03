@@ -1,6 +1,12 @@
 @import "tailwindcss";
 
 /*
+ * md-fine: the md breakpoint, but only with a mouse or trackpad. Denser field text (< 16px) uses it, because iOS
+ * Safari zooms the page when focusing a field under 16px, and an iPhone in landscape is wider than md.
+ */
+@custom-variant md-fine (@media (width >= 48rem) and (pointer: fine));
+
+/*
  * Tenth design tokens.
  *
  * Raw tokens live on :root under the names used in the design brief (--bg, --surface, --text-2, ...).
@@ -194,6 +200,22 @@
     font-optical-sizing: auto;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /*
+   * iOS Safari draws date inputs at their intrinsic width (ignoring width: 100% plus padding) and centres the value;
+   * dropping the native appearance keeps them inside their box. The native picker still opens.
+   */
+  input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    min-width: 0;
+  }
+
+  input[type="date"]::-webkit-date-and-time-value {
+    text-align: start;
+    margin: 0;
   }
 
   ::selection {
@@ -411,9 +433,19 @@
  * Phones (< 640px): sheets open as a full-screen form anchored to the TOP of the screen. The on-screen keyboard only
  * ever covers the bottom of the screen, and browsers report its size inconsistently (iOS Safari keeps the layout
  * viewport full height), so nothing important may depend on the bottom edge: the primary action sits in the title
- * bar (Dialog `phoneAction`) and the body scrolls, with room at the end to clear Safari's floating toolbar.
+ * bar (Dialog `phoneAction`) and the body scrolls.
+ *
+ * The body keeps generous room at its end so any field can be scrolled up near the top (Dialog does this on focus).
+ * Without it the body cannot scroll, and to reveal a field behind the keyboard iOS pans the whole screen instead,
+ * which slides the fixed sheet, title bar included, off the top.
  */
 @media (width < 640px) {
+  /* Centered dialogs sit near the top too, so their fields and buttons stay above the keyboard. */
+  .tenth-dialog[data-variant="dialog"] {
+    margin: calc(env(safe-area-inset-top, 0px) + 16px) auto auto;
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 32px);
+  }
+
   .tenth-dialog[data-variant="sheet"] {
     margin: 0;
     inset: 0;
@@ -436,7 +468,37 @@
 
   .tenth-dialog[data-variant="sheet"] [data-dialog-body] {
     scroll-padding-block: 24px;
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 96px);
+    padding-bottom: max(calc(env(safe-area-inset-bottom, 0px) + 96px), 70svh);
+  }
+
+  /*
+   * The title bar stays one line tall: the description is shown at the top of the body instead (Dialog renders that
+   * copy) and this one stays as the accessible description (aria-describedby).
+   */
+  .tenth-dialog[data-variant="sheet"] [data-sheet-description] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* A field must never make a dialog body scroll sideways (e.g. iOS date inputs drawn wider than their box). */
+.tenth-dialog [data-dialog-body] {
+  overflow-x: hidden;
+}
+
+/*
+ * Phones: hide the fixed bottom nav while a page field has focus. iOS keeps fixed elements on the layout viewport, so
+ * with the keyboard up the nav would float over the content just above it.
+ */
+@media (width < 768px) {
+  body:has(main :is(input:not([type="checkbox"], [type="radio"], [type="button"], [type="submit"], [type="range"]), textarea, select):focus)
+    nav[aria-label="Primary"] {
+    visibility: hidden;
   }
 }
 

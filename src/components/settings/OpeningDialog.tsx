@@ -4,7 +4,7 @@ import { useId, useRef, useState, useTransition } from "react";
 
 import { AMOUNT_ERROR_MESSAGES, formatMinor, formatMoney, parseAmount, type Currency, type LocalDate } from "@/domain";
 import { useIdempotencyKey, useUnsavedChangesGuard, type FormFailure } from "@/components/given/form-session";
-import { AmountInput, Button, CurrencyToggle, DateInput, Dialog, Field, InlineAlert, Textarea, TextInput, useToast } from "@/components/ui";
+import { AmountInput, Button, CurrencyToggle, DateInput, Field, InlineAlert, Sheet, Textarea, TextInput, useToast } from "@/components/ui";
 import { DEFAULT_OPENING_LABEL, TEXT_LIMITS } from "@/lib/validation/limits";
 import type { OpeningVM } from "@/lib/view-models";
 import { createOpeningObligationAction, updateOpeningObligationAction } from "@/server/actions/opening";
@@ -74,7 +74,12 @@ export function OpeningDialog({ open, onClose, opening, today, defaultCurrency }
 
   const fail = (next: FormFailure) => {
     setFailure(next);
-    requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
+    requestAnimationFrame(() => {
+      const form = formRef.current;
+      const target =
+        form?.querySelector<HTMLElement>('[aria-invalid="true"]') ?? form?.querySelector<HTMLElement>("[data-form-error]");
+      target?.focus();
+    });
   };
 
   const submit = () => {
@@ -114,12 +119,17 @@ export function OpeningDialog({ open, onClose, opening, today, defaultCurrency }
   };
 
   return (
-    <Dialog
+    <Sheet
       open={open}
       onClose={onClose}
       onRequestClose={guard}
       title={editing ? "Edit opening balance" : "Add an opening balance"}
       description="A tithe you already owed before you started recording income. It's added to what you owe but never counted as income."
+      phoneAction={
+        <Button type="submit" form={formId} size="sm" loading={pending} loadingLabel="Saving…">
+          {editing ? "Save" : "Add"}
+        </Button>
+      }
       footer={
         <>
           <Button variant="ghost" onClick={() => guard() && onClose()} disabled={pending}>
@@ -174,11 +184,13 @@ export function OpeningDialog({ open, onClose, opening, today, defaultCurrency }
           <Textarea rows={2} maxLength={TEXT_LIMITS.note} value={draft.note} disabled={pending} onChange={(e) => change({ note: e.target.value })} />
         </Field>
         {failure && !Object.values(failure.fieldErrors).includes(failure.message) ? (
-          <InlineAlert tone="danger" live="alert">
-            {failure.message}
-          </InlineAlert>
+          <div data-form-error tabIndex={-1} className="outline-none">
+            <InlineAlert tone="danger" live="alert">
+              {failure.message}
+            </InlineAlert>
+          </div>
         ) : null}
       </form>
-    </Dialog>
+    </Sheet>
   );
 }

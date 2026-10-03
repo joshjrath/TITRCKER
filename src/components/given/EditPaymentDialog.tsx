@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, useTransition } from "react";
+import { useId, useRef, useState, useTransition } from "react";
 
 import { formatLocalDate, formatMoney } from "@/domain";
 import { Button, Field, InlineAlert, Sheet, TextInput, Textarea, useToast } from "@/components/ui";
@@ -22,6 +22,7 @@ export interface EditPaymentDialogProps {
  */
 export function EditPaymentDialog({ payment, open, onClose }: EditPaymentDialogProps) {
   const formId = useId();
+  const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
   const [idempotencyKey, renewKey] = useIdempotencyKey();
   const [pending, startTransition] = useTransition();
@@ -38,10 +39,21 @@ export function EditPaymentDialog({ payment, open, onClose }: EditPaymentDialogP
 
   const change = (patch: Partial<typeof values>) => setValues((v) => ({ ...v, ...patch }));
 
+  /** Shows a failure and moves focus to the first invalid field (or the form-level message), scrolling it into view. */
+  const fail = (next: FormFailure) => {
+    setFailure(next);
+    requestAnimationFrame(() => {
+      const form = formRef.current;
+      const target =
+        form?.querySelector<HTMLElement>('[aria-invalid="true"]') ?? form?.querySelector<HTMLElement>("[data-form-error]");
+      target?.focus();
+    });
+  };
+
   const submit = () => {
     if (pending) return;
     if (values.churchName.trim() === "") {
-      setFailure({ message: "Please check the highlighted fields.", fieldErrors: { churchName: "Enter the church you gave to." } });
+      fail({ message: "Please check the highlighted fields.", fieldErrors: { churchName: "Enter the church you gave to." } });
       return;
     }
     startTransition(async () => {
@@ -54,7 +66,7 @@ export function EditPaymentDialog({ payment, open, onClose }: EditPaymentDialogP
         note: values.note,
       });
       if (!result.ok) {
-        setFailure({ message: result.message, fieldErrors: result.fieldErrors ?? {} });
+        fail({ message: result.message, fieldErrors: result.fieldErrors ?? {} });
         return;
       }
       renewKey();
@@ -87,6 +99,7 @@ export function EditPaymentDialog({ payment, open, onClose }: EditPaymentDialogP
       }
     >
       <form
+        ref={formRef}
         id={formId}
         noValidate
         onSubmit={(e) => {
@@ -121,9 +134,11 @@ export function EditPaymentDialog({ payment, open, onClose }: EditPaymentDialogP
           />
         </Field>
         {failure && !Object.values(failure.fieldErrors).includes(failure.message) ? (
-          <InlineAlert tone="danger" live="alert">
-            {failure.message}
-          </InlineAlert>
+          <div data-form-error tabIndex={-1} className="outline-none">
+            <InlineAlert tone="danger" live="alert">
+              {failure.message}
+            </InlineAlert>
+          </div>
         ) : null}
       </form>
     </Sheet>

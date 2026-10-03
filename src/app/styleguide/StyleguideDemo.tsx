@@ -423,7 +423,17 @@ export function StyleguideDemo() {
               </Field>
             </form>
           </Dialog>
-          <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="Add income (sample)" description="Bottom sheet on phones, centered dialog on larger screens.">
+          <Sheet
+            open={sheetOpen}
+            onClose={() => setSheetOpen(false)}
+            title="Add income (sample)"
+            description="Full-screen form with Save in the title bar on phones, centered dialog on larger screens."
+            phoneAction={
+              <Button size="sm" onClick={() => setSheetOpen(false)}>
+                Save
+              </Button>
+            }
+          >
             <div className="flex flex-col gap-4">
               <Field label="Amount received" required>
                 <AmountInput tithePreviewCurrency="CAD" currencySlot={<Badge>CAD</Badge>} />

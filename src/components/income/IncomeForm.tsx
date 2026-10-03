@@ -92,6 +92,7 @@ export function IncomeForm({
   const [problem, setProblem] = useState<FormProblem | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(() => !compact || hasDetails(start));
   const amountRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const dirty = isIncomeFormDirty(values, start, mode);
 
@@ -117,12 +118,26 @@ export function IncomeForm({
     if (errors[field]) setErrors((e) => ({ ...e, [field]: undefined }));
   }
 
+  /**
+   * Moves focus to the first invalid field, else to the form-level message, once it has rendered. Focus scrolls it
+   * into view: the Save that was pressed may be in a phone sheet's title bar, far from the message.
+   */
+  function focusProblem() {
+    requestAnimationFrame(() => {
+      const form = formRef.current;
+      const target =
+        form?.querySelector<HTMLElement>('[aria-invalid="true"]') ?? form?.querySelector<HTMLElement>("[data-form-error]");
+      target?.focus();
+    });
+  }
+
   function showErrors(fieldErrors: Record<string, string> | undefined, message: string, stale = false) {
     const { fields, other } = splitFieldErrors(fieldErrors);
     setErrors(fields);
     setProblem({ message, extra: other, stale });
     if (DETAIL_FIELDS.some((f) => fields[f])) setDetailsOpen(true);
     if (fields.amount || fields.currency) amountRef.current?.focus();
+    else focusProblem();
   }
 
   function payload() {
@@ -167,6 +182,7 @@ export function IncomeForm({
 
     if (!result) {
       setProblem(NETWORK_PROBLEM);
+      focusProblem();
       return;
     }
     if (!result.ok) {
@@ -196,7 +212,7 @@ export function IncomeForm({
       : undefined;
 
   return (
-    <form id={id} onSubmit={submit} noValidate aria-busy={pending || undefined} className={cn("flex flex-col gap-4", className)}>
+    <form ref={formRef} id={id} onSubmit={submit} noValidate aria-busy={pending || undefined} className={cn("flex flex-col gap-4", className)}>
       <Field label="Amount received" required error={errors.amount ?? errors.currency} hint={refundHint}>
         <AmountInput
           ref={amountRef}
@@ -253,24 +269,26 @@ export function IncomeForm({
       </div>
 
       {problem ? (
-        <InlineAlert
-          live="alert"
-          tone={problem.stale ? "warning" : "danger"}
-          title={problem.stale ? "This entry changed elsewhere" : undefined}
-          action={
-            problem.stale ? (
-              <Button size="sm" variant="secondary" onClick={() => router.refresh()}>
-                Reload
-              </Button>
-            ) : undefined
-          }
-        >
-          <p>{problem.message}</p>
-          {problem.extra.map((m) => (
-            <p key={m}>{m}</p>
-          ))}
-          {problem.stale ? <p>Reload, then reopen the entry to edit the latest version.</p> : null}
-        </InlineAlert>
+        <div data-form-error tabIndex={-1} className="outline-none">
+          <InlineAlert
+            live="alert"
+            tone={problem.stale ? "warning" : "danger"}
+            title={problem.stale ? "This entry changed elsewhere" : undefined}
+            action={
+              problem.stale ? (
+                <Button size="sm" variant="secondary" onClick={() => router.refresh()}>
+                  Reload
+                </Button>
+              ) : undefined
+            }
+          >
+            <p>{problem.message}</p>
+            {problem.extra.map((m) => (
+              <p key={m}>{m}</p>
+            ))}
+            {problem.stale ? <p>Reload, then reopen the entry to edit the latest version.</p> : null}
+          </InlineAlert>
+        </div>
       ) : null}
 
       <div className={inlineSubmit === "desktop" ? "max-sm:hidden" : undefined}>

@@ -63,7 +63,12 @@ export function SetAsideEntryDialog({ open, onClose, today, defaultCurrency, bal
 
   const fail = (next: FormFailure) => {
     setFailure(next);
-    requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
+    requestAnimationFrame(() => {
+      const form = formRef.current;
+      const target =
+        form?.querySelector<HTMLElement>('[aria-invalid="true"]') ?? form?.querySelector<HTMLElement>("[data-form-error]");
+      target?.focus();
+    });
   };
 
   const submit = () => {
@@ -157,9 +162,11 @@ export function SetAsideEntryDialog({ open, onClose, today, defaultCurrency, bal
           <Textarea rows={2} maxLength={TEXT_LIMITS.note} value={draft.note} disabled={pending} onChange={(e) => change({ note: e.target.value })} />
         </Field>
         {failure && !Object.values(failure.fieldErrors).includes(failure.message) ? (
-          <InlineAlert tone="danger" live="alert">
-            {failure.message}
-          </InlineAlert>
+          <div data-form-error tabIndex={-1} className="outline-none">
+            <InlineAlert tone="danger" live="alert">
+              {failure.message}
+            </InlineAlert>
+          </div>
         ) : null}
       </form>
     </Sheet>

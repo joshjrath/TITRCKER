@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useRef, type MouseEvent, type ReactNode,
 import { X } from "lucide-react";
 import { cn } from "./cn";
 import { IconButton } from "./IconButton";
+import { PHONE_QUERY, fieldRevealOffset, isTextEntryField, mediaMatches } from "./dialog-fields";
 
 export interface DialogProps {
   open: boolean;
@@ -60,6 +61,7 @@ function DialogBase({
   const bodyRef = useRef<HTMLDivElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const pointerDownOnBackdrop = useRef(false);
+  const fieldFocusedOnPointerDown = useRef(false);
   const titleId = useId();
   const descId = useId();
 
@@ -122,12 +124,53 @@ function DialogBase({
     };
   }, [open, requestClose]);
 
+  /*
+   * Phones: when a field gets focus, scroll the sheet body so the field sits near the top of the screen, above the
+   * keyboard. Otherwise iOS Safari (and Android Chrome) reveal a field hidden by the keyboard by panning the whole
+   * screen, which slides this fixed, full-screen sheet up and its title bar (Save, ✕) off the top. The body keeps
+   * enough room at its end (CSS) for any field to scroll up. Nothing here reads the keyboard size.
+   */
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (!open || variant !== "sheet" || !body) return;
+    const onFocusIn = (e: FocusEvent) => {
+      const field = e.target;
+      if (!isTextEntryField(field) || !mediaMatches(PHONE_QUERY)) return;
+      const fieldRect = field.getBoundingClientRect();
+      const labelTop = field.labels?.[0]?.getBoundingClientRect().top ?? fieldRect.top;
+      const offset = fieldRevealOffset(
+        body.getBoundingClientRect().top,
+        Math.min(labelTop, fieldRect.top),
+        fieldRect.bottom,
+        window.innerHeight,
+      );
+      if (offset > 0) body.scrollTop += offset;
+    };
+    body.addEventListener("focusin", onFocusIn);
+    return () => body.removeEventListener("focusin", onFocusIn);
+  }, [open, variant]);
+
   const onPointerDown = (e: MouseEvent<HTMLDialogElement>) => {
     pointerDownOnBackdrop.current = e.target === e.currentTarget;
+    // Read before the press moves focus away from the field (which already puts the keyboard away).
+    const active = document.activeElement;
+    fieldFocusedOnPointerDown.current = isTextEntryField(active) && e.currentTarget.contains(active);
   };
   const onClick = (e: MouseEvent<HTMLDialogElement>) => {
-    if (e.target === e.currentTarget && pointerDownOnBackdrop.current) requestClose();
+    const onBackdrop = e.target === e.currentTarget && pointerDownOnBackdrop.current;
+    const fieldWasFocused = fieldFocusedOnPointerDown.current;
     pointerDownOnBackdrop.current = false;
+    fieldFocusedOnPointerDown.current = false;
+    if (!onBackdrop) return;
+    // A full-screen phone sheet has no backdrop: a tap on its safe-area padding (by the status bar) is not a dismiss.
+    if (variant === "sheet" && mediaMatches(PHONE_QUERY)) return;
+    // On touch screens a tap outside a field is how people put the keyboard away: that tap must not close the dialog.
+    if (fieldWasFocused && mediaMatches("(pointer: coarse)")) {
+      const active = document.activeElement;
+      if (isTextEntryField(active)) active.blur();
+      return;
+    }
+    requestClose();
   };
 
   return (
@@ -157,7 +200,7 @@ function DialogBase({
                 </p>
               ) : null}
             </div>
-            <div className="-mr-2 -mt-1 flex shrink-0 items-center gap-1">
+            <div className="-mr-2 -mt-1 flex shrink-0 items-center gap-1 max-sm:gap-3">
               {variant === "sheet" && phoneAction ? <div className="sm:hidden">{phoneAction}</div> : null}
               <IconButton aria-label={closeLabel} icon={<X />} onClick={requestClose} />
             </div>
@@ -167,6 +210,13 @@ function DialogBase({
             data-dialog-body
             className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 pt-4 sm:px-6 sm:pb-6"
           >
+            {variant === "sheet" && description ? (
+              // Phones: the description scrolls with the form, so the fixed title bar stays one line tall. The header
+              // copy stays in place (visually hidden by CSS) as the dialog's accessible description.
+              <p aria-hidden="true" data-sheet-description-body className="mb-4 text-[0.875rem] text-text-2 sm:hidden">
+                {description}
+              </p>
+            ) : null}
             {children}
           </div>
           {footer ? (
