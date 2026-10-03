@@ -2,7 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import { toLocalDate } from './dates';
-import { combineStillToGiveInCad, convertUsdToCadMinor, type FxRate, parseFxRate } from './fx';
+import { combineAmountsInCad, combineStillToGiveInCad, convertUsdToCadMinor, type FxRate, parseFxRate } from './fx';
 import { MAX_AMOUNT_MINOR } from './constants';
 import { toMinor } from './money';
 
@@ -79,5 +79,64 @@ describe('combineStillToGiveInCad', () => {
 
   it('returns null when USD is owed but no rate is available', () => {
     expect(combineStillToGiveInCad({ CAD: toMinor(15_000), USD: toMinor(1_000) }, null)).toBeNull();
+  });
+});
+
+describe('combineAmountsInCad', () => {
+  it("matches the owner's report: income and tithe with USD at 1.4145", () => {
+    // USD 1,750.00 × 1.4145 = 2,475.375 → CAD 2,475.38 (half-up)
+    expect(convertUsdToCadMinor(toMinor(175_000), '1.4145')).toBe(247_538);
+    expect(combineAmountsInCad({ CAD: toMinor(520_300), USD: toMinor(175_000) }, '1.4145')).toEqual({
+      totalCadMinor: 767_838,
+      cadMinor: 520_300,
+      usdMinor: 175_000,
+      usdInCadMinor: 247_538,
+    });
+    // Tithe: USD 175.00 × 1.4145 = 247.5375 → CAD 247.54; CAD 520.30 + 247.54 = CAD 767.84
+    expect(combineAmountsInCad({ CAD: toMinor(52_030), USD: toMinor(17_500) }, '1.4145')).toEqual({
+      totalCadMinor: 76_784,
+      cadMinor: 52_030,
+      usdMinor: 17_500,
+      usdInCadMinor: 24_754,
+    });
+  });
+
+  it('matches the E2E journey at the pinned rate 1.3500', () => {
+    expect(combineAmountsInCad({ CAD: toMinor(199_999), USD: toMinor(10_000) }, '1.3500')?.totalCadMinor).toBe(213_499);
+    expect(combineAmountsInCad({ CAD: toMinor(20_000), USD: toMinor(1_000) }, '1.3500')?.totalCadMinor).toBe(21_350);
+    expect(combineAmountsInCad({ CAD: toMinor(5_000), USD: toMinor(0) }, '1.3500')?.totalCadMinor).toBe(5_000);
+  });
+
+  it('rounds the converted USD half-up to the cent', () => {
+    expect(combineAmountsInCad({ CAD: toMinor(0), USD: toMinor(2) }, '1.3750')?.usdInCadMinor).toBe(3); // 0.0275 → 0.03
+    expect(combineAmountsInCad({ CAD: toMinor(0), USD: toMinor(1) }, '1.3750')?.usdInCadMinor).toBe(1); // 0.01375 → 0.01
+  });
+
+  it('works for negative amounts (symmetric rounding)', () => {
+    expect(combineAmountsInCad({ CAD: toMinor(-1_000), USD: toMinor(-2) }, '1.3750')).toEqual({
+      totalCadMinor: -1_003,
+      cadMinor: -1_000,
+      usdMinor: -2,
+      usdInCadMinor: -3,
+    });
+    expect(combineAmountsInCad({ CAD: toMinor(5_000), USD: toMinor(-1_000) }, '1.3500')?.totalCadMinor).toBe(3_650);
+  });
+
+  it('needs no rate when there is no USD', () => {
+    expect(combineAmountsInCad({ CAD: toMinor(12_345), USD: toMinor(0) }, null)).toEqual({
+      totalCadMinor: 12_345,
+      cadMinor: 12_345,
+      usdMinor: 0,
+      usdInCadMinor: 0,
+    });
+  });
+
+  it('returns null (never a guess) when there is USD but no rate', () => {
+    expect(combineAmountsInCad({ CAD: toMinor(12_345), USD: toMinor(1) }, null)).toBeNull();
+    expect(combineAmountsInCad({ CAD: toMinor(0), USD: toMinor(-1) }, null)).toBeNull();
+  });
+
+  it('refuses an invalid rate instead of guessing', () => {
+    expect(() => combineAmountsInCad({ CAD: toMinor(0), USD: toMinor(100) }, '9.99')).toThrow(RangeError);
   });
 });

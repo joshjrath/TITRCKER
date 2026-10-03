@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { formatMoney, type BucketPosition, type PeriodSummary } from "@/domain";
+import { formatMoney, type BucketPosition, type Currency, type PeriodSummary } from "@/domain";
 import { AddIncomeButton } from "@/components/app/AddIncomeButton";
 import { AnimatedAmount } from "@/components/motion";
-import { CombinedBreakdown, spokenCombined } from "@/components/fx";
+import { chartCurrencyNote, CombinedBreakdown, combinedRateNote, spokenCombined } from "@/components/fx";
 import { Badge, cn, keepMoneyTogether } from "@/components/ui";
-import type { CombinedTotalVM, CurrencyHeadlineVM } from "@/lib/view-models";
-import { balanceNotes, overviewHref, periodStatNotes } from "./overview-text";
+import type { CombinedPeriodVM, CombinedTotalVM, CurrencyHeadlineVM } from "@/lib/view-models";
+import { balanceNotes, combinedPeriodStatNotes, overviewHref, periodStatNotes } from "./overview-text";
 import { PeriodStat } from "./PeriodStat";
 
 export interface BalanceHeroProps {
@@ -23,6 +23,11 @@ export interface BalanceHeroProps {
   combined: CombinedTotalVM;
   /** True when the USD ledger has any activity. */
   usdActive: boolean;
+  /** The selected period in each currency, for the combined figures' notes. */
+  periodSummaries: Record<Currency, PeriodSummary>;
+  periodBuckets: Record<Currency, BucketPosition | null>;
+  /** The selected period's figures in CAD when both currencies have activity in it. */
+  combinedPeriod: CombinedPeriodVM;
 }
 
 function OtherCurrencyLine({ other, periodKey }: { other: CurrencyHeadlineVM; periodKey: string }) {
@@ -54,6 +59,9 @@ export function BalanceHero({
   periodKey,
   combined,
   usdActive,
+  periodSummaries,
+  periodBuckets,
+  combinedPeriod,
 }: BalanceHeroProps) {
   const c = headline.currency;
   const notes = balanceNotes(headline, buckets, currentYear);
@@ -120,16 +128,74 @@ export function BalanceHero({
         </div>
       </div>
 
-      <section aria-labelledby="period-figures" className="mt-8 border-t border-line pt-5 desk:mt-0">
-        <h3 id="period-figures" className="eyebrow mb-4">
-          {summary.range.label}
-        </h3>
-        <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-line sm:*:px-5 sm:[&>*:first-child]:pl-0 sm:[&>*:last-child]:pr-0">
-          <PeriodStat label="Income received" minor={summary.netIncomeMinor} currency={c} note={statNotes.income} />
-          <PeriodStat label="Tithe accrued" minor={summary.accruedMinor} currency={c} note={statNotes.accrued} />
-          <PeriodStat label="Given" minor={summary.givenMinor} currency={c} note={statNotes.given} noteTone="positive" />
-        </dl>
-      </section>
+      <PeriodFigures
+        summary={summary}
+        statNotes={statNotes}
+        periodSummaries={periodSummaries}
+        periodBuckets={periodBuckets}
+        combinedPeriod={combinedPeriod}
+      />
     </div>
+  );
+}
+
+interface PeriodFiguresProps {
+  summary: PeriodSummary;
+  statNotes: ReturnType<typeof periodStatNotes>;
+  periodSummaries: Record<Currency, PeriodSummary>;
+  periodBuckets: Record<Currency, BucketPosition | null>;
+  combinedPeriod: CombinedPeriodVM;
+}
+
+/**
+ * The selected period's income received, tithe accrued and given. When both currencies have activity in the period,
+ * each figure is the combined amount in CAD (display-only, marked ≈) with the separate amounts listed underneath.
+ */
+function PeriodFigures({ summary, statNotes, periodSummaries, periodBuckets, combinedPeriod }: PeriodFiguresProps) {
+  const c = summary.currency;
+  const other: Currency = c === "CAD" ? "USD" : "CAD";
+  const { status, incomeCad, accruedCad, givenCad, rate } = combinedPeriod;
+  const combinedOn = status === "combined" && incomeCad && accruedCad && givenCad;
+  const notes = combinedOn ? combinedPeriodStatNotes(periodSummaries, periodBuckets) : statNotes;
+  return (
+    <section aria-labelledby="period-figures" className="mt-8 border-t border-line pt-5 desk:mt-0" data-testid="period-figures">
+      <h3 id="period-figures" className="eyebrow mb-4">
+        {summary.range.label}
+        {combinedOn ? <span className="normal-case tracking-normal text-text-3"> · in CAD</span> : null}
+      </h3>
+      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-line sm:*:px-5 sm:[&>*:first-child]:pl-0 sm:[&>*:last-child]:pr-0">
+        {combinedOn ? (
+          <>
+            <PeriodStat label="Income received" minor={incomeCad.totalCadMinor} currency="CAD" combined={{ amount: incomeCad, rate }} note={notes.income} />
+            <PeriodStat label="Tithe accrued" minor={accruedCad.totalCadMinor} currency="CAD" combined={{ amount: accruedCad, rate }} note={notes.accrued} />
+            <PeriodStat
+              label="Given"
+              minor={givenCad.totalCadMinor}
+              currency="CAD"
+              combined={{ amount: givenCad, rate }}
+              note={notes.given}
+              noteTone="positive"
+            />
+          </>
+        ) : (
+          <>
+            <PeriodStat label="Income received" minor={summary.netIncomeMinor} currency={c} note={notes.income} />
+            <PeriodStat label="Tithe accrued" minor={summary.accruedMinor} currency={c} note={notes.accrued} />
+            <PeriodStat label="Given" minor={summary.givenMinor} currency={c} note={notes.given} noteTone="positive" />
+          </>
+        )}
+      </dl>
+      {combinedOn ? (
+        <p className="mt-4 flex flex-col gap-0.5 text-xs text-text-3">
+          {rate ? <span className={rate.stale ? "text-copper" : undefined}>{combinedRateNote(rate)}</span> : null}
+          <span>{chartCurrencyNote(c)}</span>
+        </p>
+      ) : null}
+      {status === "unavailable" ? (
+        <p className="mt-4 text-xs text-text-2">
+          {c} only — {other} isn&apos;t included in these figures because the exchange rate is unavailable right now.
+        </p>
+      ) : null}
+    </section>
   );
 }

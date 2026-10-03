@@ -54,6 +54,9 @@ export function BalanceSurface({ vm }: { vm: OverviewVM }) {
               periodKey={periodKey}
               combined={vm.combined}
               usdActive={vm.headlines.some((h) => h.currency === "USD" && h.hasActivity)}
+              periodSummaries={vm.periodSummaries}
+              periodBuckets={vm.periodBuckets}
+              combinedPeriod={vm.combinedPeriod}
             />
           )}
         </div>

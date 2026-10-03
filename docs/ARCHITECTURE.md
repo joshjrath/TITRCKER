@@ -64,7 +64,7 @@ Rules: `domain` imports nothing outside `domain`. `components` never import `ser
   tithe uses `BigInt`. No floating-point arithmetic ever touches ledger math.
 * Supported currencies: `CAD` (default) and `USD`, both with 2 minor digits. CAD and USD ledgers are
   fully independent. Nothing in the ledger ever adds CAD to USD. The only conversion is the display-only combined
-  total in CAD described in §3.10.
+  CAD view described in §3.10 (still-to-give, the Overview's period figures and the Ledger's filtered totals).
 * **Safe limit:** a single amount (income, payment, refund, opening obligation, set-aside) must be
   between `0.01` and `999,999,999.99` inclusive (`MAX_AMOUNT_MINOR = 99_999_999_999`). Sums are checked with
   `Number.isSafeInteger`; that would only fail after ~90,000 maximum-size entries, and if it does the operation throws.
@@ -192,7 +192,24 @@ Worked example (CAD): income 1,750.00 + 249.99 gives accrued 200.00. Give 50.00 
   once it is more than 4 days old. The very first lookup, with nothing stored, waits at most about 2.5 s per provider.
   After every provider fails, they are not asked again for 10 minutes. With no rate at all, the UI shows the currencies
   separately and says the combined total is unavailable. It never shows a guessed number.
-* A rate is looked up only when something is owed in USD, so a CAD-only account makes no outbound requests.
+* **Period figures (Overview).** When both currencies have activity in the selected period (`periodHasActivity`: an
+  entry, a refund, an opening balance, tithe, a payment or applied credit), Income received, Tithe accrued and Given
+  each show CAD + USD × rate (`combineAmountsInCad`, the same exact half-up rounding, any sign), marked "≈" when a USD
+  part was converted, with the separate amounts listed underneath ("CAD 5,203.00 · USD 1,750.00") and the rate in a
+  footnote. Screen readers hear "approximately CAD 7,678.38 in CAD, including USD 1,750.00 converted at 1.4145". Entry
+  counts add up across currencies; refund, opening-balance and credit notes stay in their own currency. The figures
+  are combined whenever the currency NOT selected has activity in the period — including when only it does (a USD-only
+  month with CAD selected shows ≈ CAD of the USD, never CAD 0.00), so they never leave out entries the Ledger lists. Only
+  when the selected currency alone has activity are the figures shown as they are. With no rate, the selected currency's figures are shown
+  with a note that the other currency isn't included. The CAD/USD switch ("Chart currency") keeps choosing the chart,
+  the monthly breakdown and the per-currency notes. View models: `OverviewVM.periodSummaries`,
+  `OverviewVM.periodBuckets`, `OverviewVM.combinedPeriod` (`single_currency | combined | unavailable`).
+* **Ledger totals.** The filtered totals stay per currency. When the rows on screen include both currencies, one line
+  underneath adds them up in CAD in the browser ("Total ≈ CAD 7,678.38 received · ≈ CAD 767.84 tithe (USD at
+  1.4145)"), using `LedgerVM.displayRate` and the same domain helper.
+* A rate is looked up only when the USD ledger has activity, so a CAD-only account makes no outbound requests. Each read
+  model looks it up once, after its read transaction, and reuses it for every combined figure on the page. The Given
+  page, which only shows the combined still-to-give, looks it up only when something is owed in USD.
 
 ---
 

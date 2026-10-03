@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { toLocalDate, toMinor, type Currency } from "@/domain";
-import type { IncomeRowVM } from "@/lib/view-models";
+import type { FxRateVM, IncomeRowVM } from "@/lib/view-models";
 import {
   DEFAULT_LEDGER_VIEW,
   dateBounds,
@@ -8,6 +8,7 @@ import {
   filteredCsv,
   filteredCsvFilename,
   hasActiveFilters,
+  combinedSelectionTotals,
   selectRows,
   selectionTotals,
   toLedgerRow,
@@ -129,6 +130,32 @@ describe("selection totals", () => {
 
   it("is empty when nothing matches", () => {
     expect(selectionTotals(selectRows(all, view({ query: "zzz" })).ledgerRows)).toEqual([]);
+  });
+});
+
+describe("combinedSelectionTotals", () => {
+  const rate = { value: "1.4145", observedOn: "2026-09-25", sourceLabel: "Bank of Canada", stale: false } as FxRateVM;
+  const owner = [
+    row({ amount: 470_300, on: "2026-10-03", source: "Ash" }),
+    row({ amount: 50_000, on: "2026-10-03", source: "Ammama" }),
+    row({ amount: 175_000, currency: "USD", on: "2026-10-03", source: "Scale Media" }),
+  ];
+
+  it("expresses the filtered totals in CAD with USD converted (the owner's numbers)", () => {
+    const totals = selectionTotals(selectRows(owner, DEFAULT_LEDGER_VIEW).ledgerRows);
+    const combined = combinedSelectionTotals(totals, rate);
+    // CAD 5,203.00 + USD 1,750.00 × 1.4145 (2,475.375 → 2,475.38) = CAD 7,678.38
+    expect(combined?.received).toEqual({ totalCadMinor: 767_838, cadMinor: 520_300, usdMinor: 175_000, usdInCadMinor: 247_538 });
+    // CAD 520.30 + USD 175.00 × 1.4145 (247.5375 → 247.54) = CAD 767.84
+    expect(combined?.tithe.totalCadMinor).toBe(76_784);
+    expect(combined?.refunded.totalCadMinor).toBe(0);
+  });
+
+  it("is null for a single currency or without a rate", () => {
+    const cadOnly = selectionTotals(selectRows(owner, view({ currency: "CAD" })).ledgerRows);
+    expect(combinedSelectionTotals(cadOnly, rate)).toBeNull();
+    const both = selectionTotals(selectRows(owner, DEFAULT_LEDGER_VIEW).ledgerRows);
+    expect(combinedSelectionTotals(both, null)).toBeNull();
   });
 });
 

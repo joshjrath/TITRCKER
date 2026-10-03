@@ -1,9 +1,10 @@
 /**
- * Display-only currency conversion for the combined "Total still to give in CAD".
+ * Display-only currency conversion: the combined "Total still to give in CAD", and the combined CAD view of the
+ * Overview's period figures and the Ledger's filtered totals.
  *
  * Policy (owner request, ARCHITECTURE §3.10):
  * - CAD and USD ledgers stay independent. Nothing converted is ever stored, allocated or exported.
- * - Only per-currency still-to-give amounts are converted and summed. Credits are never netted across currencies.
+ * - Per-currency amounts are converted and summed only for display. Credits are never netted across currencies.
  * - Conversion is exact: the decimal rate is parsed into an integer and a scale, multiplied with BigInt and rounded
  *   half-up to the cent (symmetric for negative amounts).
  */
@@ -89,12 +90,33 @@ export function convertUsdToCadMinor(usdMinor: Minor, rate: string): Minor {
   return toMinor(Number(amount < 0n ? -rounded : rounded));
 }
 
-/** The combined figure shown at the top of the Overview. */
-export interface CombinedTotal {
+/** Several per-currency amounts expressed in CAD (display-only). */
+export interface AmountsInCad {
+  /** CAD amount plus the USD amount converted to CAD. */
   totalCadMinor: Minor;
   cadMinor: Minor;
   usdMinor: Minor;
+  /** The USD amount converted to CAD (0 when there is no USD). */
   usdInCadMinor: Minor;
+}
+
+/**
+ * Expresses per-currency amounts in CAD: CAD as is, plus USD converted at `rate` (a decimal USD→CAD string), rounded
+ * half-up to the cent. Works for any sign (e.g. a period whose refunds exceed its income). Returns null when there is
+ * USD to convert but no rate, so callers never show a guessed number. With no USD, no rate is needed.
+ * Example: CAD 5,203.00 + USD 1,750.00 at 1.4145 (2,475.375 → 2,475.38) = CAD 7,678.38.
+ */
+export function combineAmountsInCad(amounts: Record<Currency, Minor>, rate: string | null): AmountsInCad | null {
+  const cadMinor = amounts.CAD;
+  const usdMinor = amounts.USD;
+  if (usdMinor === 0) return { totalCadMinor: cadMinor, cadMinor, usdMinor, usdInCadMinor: toMinor(0) };
+  if (rate === null) return null;
+  const usdInCadMinor = convertUsdToCadMinor(usdMinor, rate);
+  return { totalCadMinor: addMinor(cadMinor, usdInCadMinor), cadMinor, usdMinor, usdInCadMinor };
+}
+
+/** The combined figure shown at the top of the Overview. */
+export interface CombinedTotal extends AmountsInCad {
   /** Null only when there was no USD to convert. */
   rate: FxRate | null;
 }
@@ -104,12 +126,6 @@ export interface CombinedTotal {
  * must fall back to showing the currencies separately. Inputs are per-currency still-to-give (never negative).
  */
 export function combineStillToGiveInCad(stillToGive: Record<Currency, Minor>, rate: FxRate | null): CombinedTotal | null {
-  const cadMinor = stillToGive.CAD;
-  const usdMinor = stillToGive.USD;
-  if (usdMinor === 0) {
-    return { totalCadMinor: cadMinor, cadMinor, usdMinor, usdInCadMinor: toMinor(0), rate };
-  }
-  if (!rate) return null;
-  const usdInCadMinor = convertUsdToCadMinor(usdMinor, rate.rate);
-  return { totalCadMinor: addMinor(cadMinor, usdInCadMinor), cadMinor, usdMinor, usdInCadMinor, rate };
+  const combined = combineAmountsInCad(stillToGive, rate?.rate ?? null);
+  return combined ? { ...combined, rate } : null;
 }

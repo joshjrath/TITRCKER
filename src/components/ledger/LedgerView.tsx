@@ -114,6 +114,7 @@ export function LedgerView({ vm }: { vm: LedgerVM }) {
           totalCount={vm.rows.length}
           totals={totals}
           filtered={filtered}
+          rate={vm.displayRate}
           actions={actions}
           highlightFor={highlightFor}
         />

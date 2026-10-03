@@ -1,23 +1,26 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { CombinedTotalLine } from "@/components/fx";
-import { Amount, cn } from "@/components/ui";
-import type { CombinedTotalVM, CurrencyHeadlineVM } from "@/lib/view-models";
-import { entryCountText, type CurrencyTotals } from "./ledger-view";
+import { CombinedTotalLine, ledgerCombinedLine, ledgerCombinedSegments } from "@/components/fx";
+import { Amount, cn, keepMoneyTogether } from "@/components/ui";
+import type { CombinedTotalVM, CurrencyHeadlineVM, FxRateVM } from "@/lib/view-models";
+import { combinedSelectionTotals, entryCountText, type CurrencyTotals } from "./ledger-view";
 
 export interface FilteredTotalsProps {
   totals: readonly CurrencyTotals[];
   shown: number;
   total: number;
   filtered: boolean;
+  /** USD→CAD display rate (when USD has activity), for the combined line under the per-currency totals. */
+  rate?: FxRateVM | null;
   className?: string;
 }
 
 /**
- * Totals of the rows on screen, per currency. Labelled as this view so they are never mistaken for the
+ * Totals of the rows on screen, per currency, plus one combined line in CAD when they hold both currencies. Labelled as this view so they are never mistaken for the
  * all-time balance. A polite status, so filter changes are announced as a count.
  */
-export function FilteredTotals({ totals, shown, total, filtered, className }: FilteredTotalsProps) {
+export function FilteredTotals({ totals, shown, total, filtered, rate = null, className }: FilteredTotalsProps) {
+  const combined = combinedSelectionTotals(totals, rate);
   return (
     <div className={cn("flex flex-col gap-1", className)}>
       <p role="status" className="text-[0.9375rem] font-medium text-text">
@@ -47,6 +50,17 @@ export function FilteredTotals({ totals, shown, total, filtered, className }: Fi
           </span>
         </p>
       ))}
+      {combined && rate ? (
+        <p className="tabular mt-1 flex flex-wrap gap-x-1.5 text-label text-text-2" data-testid="ledger-combined-total">
+          <span className="sr-only">{ledgerCombinedLine(combined, rate)}</span>
+          {ledgerCombinedSegments(combined, rate).map((part, i, all) => (
+            <span key={part} aria-hidden="true" className="whitespace-nowrap">
+              {keepMoneyTogether(part)}
+              {i < all.length - 2 ? " ·" : ""}
+            </span>
+          ))}
+        </p>
+      ) : null}
     </div>
   );
 }

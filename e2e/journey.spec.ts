@@ -160,8 +160,28 @@ test("USD stays separate and the top shows the combined total in CAD at the day'
   const breakdown = page.getByRole("definition").filter({ hasText: "USD 10.00" });
   await expect(breakdown.first()).toContainText("CAD 13.50");
   await expect(page.getByText(/USD→CAD 1\.3500/).first()).toBeVisible();
+
+  // The period figures combine both currencies in CAD too, with the separate amounts listed underneath.
+  const figures = page.getByTestId("period-figures");
+  // Income: CAD 1,999.99 + USD 100.00 × 1.3500 = CAD 2,134.99
+  await expect(figures).toContainText("approximately CAD 2,134.99 in CAD, including USD 100.00 converted at 1.3500");
+  await expect(figures).toContainText("CAD 1,999.99 · USD 100.00");
+  await expect(figures).toContainText("3 entries");
+  // Tithe: CAD 200.00 + USD 10.00 × 1.3500 = CAD 213.50
+  await expect(figures).toContainText("approximately CAD 213.50 in CAD, including USD 10.00 converted at 1.3500");
+  await expect(figures).toContainText("CAD 200.00 · USD 10.00");
+  // Given: CAD 50.00 + USD 0.00 = CAD 50.00 (nothing converted, so not approximate)
+  await expect(figures).toContainText("CAD 50.00 in CAD, nothing in USD");
+  await expect(figures).toContainText("CAD 50.00 · USD 0.00");
+  await expect(figures).toContainText("≈ CAD totals include USD converted at 1.3500");
+  await expect(figures.locator("[data-combined]")).toHaveCount(3);
+  await expect(page.getByRole("radiogroup", { name: "Chart currency" })).toBeVisible();
+
   await page.goto("/ledger");
   await expect(page.getByText("Total ≈ CAD 163.50").first()).toBeVisible();
+  await expect(page.getByTestId("ledger-combined-total")).toContainText(
+    "Total ≈ CAD 2,134.99 received · ≈ CAD 213.50 tithe (USD at 1.3500)",
+  );
 });
 
 test("CSV export and JSON backup reconcile with the balance and are never cached", async () => {

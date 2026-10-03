@@ -65,7 +65,7 @@ export interface CurrencySwitchProps {
   switchable: boolean;
 }
 
-/** CAD | USD switch that navigates via the URL, or the single active currency as text. */
+/** CAD | USD switch for the charts and details (navigates via the URL), or the single active currency as text. */
 export function CurrencySwitch({ value, period, switchable }: CurrencySwitchProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -77,12 +77,20 @@ export function CurrencySwitch({ value, period, switchable }: CurrencySwitchProp
       </p>
     );
   }
+  // The period figures above combine both currencies in CAD; this switch picks the currency of the charts, the
+  // monthly breakdown and the per-currency notes, so it says so.
   return (
-    <CurrencyToggle
-      size="md"
-      label="Currency shown"
-      value={value}
-      onChange={(currency) => startTransition(() => router.push(overviewHref({ period, currency }), { scroll: false }))}
-    />
+    <div className="flex items-center gap-2">
+      {/* Phones keep the room for the period; the period figures' footnote names the chart currency there. */}
+      <span aria-hidden="true" className="text-xs font-medium text-text-3 max-sm:hidden">
+        Charts
+      </span>
+      <CurrencyToggle
+        size="md"
+        label="Chart currency"
+        value={value}
+        onChange={(currency) => startTransition(() => router.push(overviewHref({ period, currency }), { scroll: false }))}
+      />
+    </div>
   );
 }

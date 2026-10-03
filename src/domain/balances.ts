@@ -353,6 +353,23 @@ export function summarizePeriod(
   };
 }
 
+/**
+ * True when a period summary has anything to show: an income entry, a refund, an opening balance, tithe, a payment
+ * or applied credit. Used to decide whether the Overview's period figures combine both currencies.
+ */
+export function periodHasActivity(summary: PeriodSummary): boolean {
+  return (
+    summary.entryCount > 0 ||
+    summary.grossIncomeMinor !== 0 ||
+    summary.refundedMinor !== 0 ||
+    summary.netIncomeMinor !== 0 ||
+    summary.accruedMinor !== 0 ||
+    summary.openingMinor !== 0 ||
+    summary.givenMinor !== 0 ||
+    summary.creditAppliedMinor !== 0
+  );
+}
+
 /** Unpaid balance carried over from earlier years: Σ outstanding of buckets before `currentYear`. */
 export function carriedOverMinor(balance: CurrencyBalance, currentYear: number): Minor {
   return sumMinor(balance.buckets.filter((b) => b.year < currentYear).map((b) => b.outstandingMinor));

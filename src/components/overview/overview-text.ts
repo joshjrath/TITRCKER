@@ -91,6 +91,28 @@ export function periodStatNotes(summary: PeriodSummary, bucket: BucketPosition |
   return notes;
 }
 
+/**
+ * Sublabels for combined period figures (both currencies active): the entry count across both currencies, and each
+ * currency's refunds, opening balance and credit notes, kept in its own currency.
+ */
+export function combinedPeriodStatNotes(
+  summaries: Record<Currency, PeriodSummary>,
+  buckets: Record<Currency, BucketPosition | null>,
+): PeriodStatNotes {
+  const cad = periodStatNotes(summaries.CAD, buckets.CAD ?? undefined);
+  const usd = periodStatNotes(summaries.USD, buckets.USD ?? undefined);
+  const refunds = [summaries.CAD, summaries.USD].filter((s) => s.refundedMinor > 0).map((s) => formatMoney(s.refundedMinor, s.currency));
+  const incomeParts = [entries(summaries.CAD.entryCount + summaries.USD.entryCount)];
+  if (refunds.length > 0) incomeParts.push(`after ${refunds.join(" and ")} in refunds`);
+  const join = (a?: string, b?: string) => [a, b].filter(Boolean).join(" · ") || undefined;
+  const notes: PeriodStatNotes = { income: incomeParts.join(" · ") };
+  const accrued = join(cad.accrued, usd.accrued);
+  const given = join(cad.given, usd.given);
+  if (accrued) notes.accrued = accrued;
+  if (given) notes.given = given;
+  return notes;
+}
+
 /** What the monthly breakdown's Given column counts, so its total reads the same as the period's "Given". */
 export function monthlyGivenNote(key: PeriodKey): string {
   return key === "all"

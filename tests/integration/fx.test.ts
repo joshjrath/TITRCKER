@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { toMinor, type CurrencyBalance, type Currency } from "@/domain";
 import { closeDb, getDb } from "@/server/db/client";
@@ -6,8 +6,11 @@ import { exchangeRate } from "@/server/db/schema";
 import { combinedStillToGive } from "@/server/fx/combined";
 import { FX_PROVIDERS, type FxProvider } from "@/server/fx/providers";
 import { FX_REFRESH_AFTER_MS, FX_RETRY_AFTER_FAILURE_MS, getUsdCadRate, pendingFxRefresh, resetFxStateForTests } from "@/server/fx/rates";
+import { getGiven } from "@/server/read-models/given";
+import { getLedger } from "@/server/read-models/ledger";
 import { getOverview } from "@/server/read-models/overview";
 import { createIncome } from "@/server/services/income";
+import { recordPayment } from "@/server/services/payments";
 
 import { createTestUser, resetAppData } from "./helpers/db";
 import { ctxFor, key, noonToronto } from "./helpers/services";
@@ -176,5 +179,162 @@ describe("overview read model", () => {
       if (previous === undefined) delete process.env.TENTH_TEST_MODE;
       else process.env.TENTH_TEST_MODE = previous;
     }
+  });
+});
+
+/** Runs `fn` with the pinned test rate (TENTH_FX_TEST_RATE honoured only in test mode). */
+async function withTestRate<T>(rate: string, fn: () => Promise<T>): Promise<T> {
+  process.env.TENTH_FX_TEST_RATE = rate;
+  const previous = process.env.TENTH_TEST_MODE;
+  process.env.TENTH_TEST_MODE = "1";
+  try {
+    return await fn();
+  } finally {
+    delete process.env.TENTH_FX_TEST_RATE;
+    if (previous === undefined) delete process.env.TENTH_TEST_MODE;
+    else process.env.TENTH_TEST_MODE = previous;
+  }
+}
+
+describe("combined period figures and ledger totals (display-only)", () => {
+  const today = "2026-10-03";
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  async function ownerReport() {
+    // The owner's report: CAD 4,703.00 + 500.00 and USD 1,750.00 received on Oct 3, nothing given yet.
+    const owner = await createTestUser("fx-period@example.test");
+    const ctx = ctxFor(owner, noonToronto(today));
+    await createIncome(ctx, { idempotencyKey: key(), amount: "4,703.00", currency: "CAD", receivedOn: today, source: "Ash" });
+    await createIncome(ctx, { idempotencyKey: key(), amount: "500.00", currency: "CAD", receivedOn: today, source: "Ammama" });
+    await createIncome(ctx, { idempotencyKey: key(), amount: "1,750.00", currency: "USD", receivedOn: today, source: "Scale Media" });
+    return ctx;
+  }
+
+  it("shows the selected period in CAD with USD converted, next to each currency's own figures", async () => {
+    const ctx = await ownerReport();
+    const vm = await withTestRate("1.4145", () => getOverview(ctx, { currency: "CAD" }));
+    // The selected currency still drives the chart and the per-currency summary...
+    expect(vm.currency).toBe("CAD");
+    expect(vm.periodSummary).toMatchObject({ currency: "CAD", netIncomeMinor: 520_300, accruedMinor: 52_030, entryCount: 2 });
+    // ...both currencies' period figures are available...
+    expect(vm.periodSummaries.CAD).toMatchObject({ netIncomeMinor: 520_300, accruedMinor: 52_030, givenMinor: 0, entryCount: 2 });
+    expect(vm.periodSummaries.USD).toMatchObject({ netIncomeMinor: 175_000, accruedMinor: 17_500, givenMinor: 0, entryCount: 1 });
+    expect(vm.periodBuckets.CAD?.year).toBe(2026);
+    expect(vm.periodBuckets.USD?.year).toBe(2026);
+    // ...and combined in CAD: USD 1,750.00 × 1.4145 = 2,475.375 → 2,475.38; USD 175.00 × 1.4145 = 247.5375 → 247.54.
+    expect(vm.combinedPeriod).toEqual({
+      status: "combined",
+      incomeCad: { totalCadMinor: 767_838, cadMinor: 520_300, usdMinor: 175_000, usdInCadMinor: 247_538 },
+      accruedCad: { totalCadMinor: 76_784, cadMinor: 52_030, usdMinor: 17_500, usdInCadMinor: 24_754 },
+      givenCad: { totalCadMinor: 0, cadMinor: 0, usdMinor: 0, usdInCadMinor: 0 },
+      rate: { value: "1.4145", observedOn: expect.any(String), sourceLabel: "Test rate", stale: false },
+    });
+    // The combined still-to-give is unchanged: CAD 520.30 + USD 175.00 → CAD 767.84.
+    expect(vm.combined).toMatchObject({ status: "combined", totalCadMinor: 76_784, cadMinor: 52_030, usdMinor: 17_500, usdInCadMinor: 24_754 });
+
+    // Switching the chart currency to USD does not change the combined figures.
+    const usdView = await withTestRate("1.4145", () => getOverview(ctx, { currency: "USD" }));
+    expect(usdView.periodSummary.currency).toBe("USD");
+    expect(usdView.combinedPeriod).toEqual(vm.combinedPeriod);
+  });
+
+  it("gives the Ledger the display rate whenever USD has activity", async () => {
+    const ctx = await ownerReport();
+    const vm = await withTestRate("1.4145", () => getLedger(ctx));
+    expect(vm.displayRate).toMatchObject({ value: "1.4145", sourceLabel: "Test rate" });
+    expect(vm.combined).toMatchObject({ status: "combined", totalCadMinor: 76_784 });
+  });
+
+  it("looks the rate up when USD has activity even though nothing is owed in USD", async () => {
+    const owner = await createTestUser("fx-paid@example.test");
+    const ctx = ctxFor(owner, noonToronto(today));
+    await createIncome(ctx, { idempotencyKey: key(), amount: "1,750.00", currency: "CAD", receivedOn: today });
+    await createIncome(ctx, { idempotencyKey: key(), amount: "100.00", currency: "USD", receivedOn: today });
+    await recordPayment(ctx, {
+      idempotencyKey: key(),
+      amount: "10.00",
+      currency: "USD",
+      paidOn: today,
+      churchName: "Grace",
+      allocations: "auto",
+      confirmCredit: false,
+      confirmMadePayment: true,
+      drawFromSetAside: false,
+    });
+    const vm = await withTestRate("1.3500", () => getOverview(ctx));
+    // Nothing owed in USD: the still-to-give stays CAD only (no rate shown there)...
+    expect(vm.combined).toMatchObject({ status: "cad_only", totalCadMinor: 17_500, rate: null });
+    // ...but the period figures still combine: given CAD 0 + USD 10.00 × 1.35 = CAD 13.50.
+    expect(vm.combinedPeriod.status).toBe("combined");
+    expect(vm.combinedPeriod.incomeCad?.totalCadMinor).toBe(175_000 + 13_500);
+    expect(vm.combinedPeriod.accruedCad?.totalCadMinor).toBe(17_500 + 1_350);
+    expect(vm.combinedPeriod.givenCad).toEqual({ totalCadMinor: 1_350, cadMinor: 0, usdMinor: 1_000, usdInCadMinor: 1_350 });
+    const ledger = await withTestRate("1.3500", () => getLedger(ctx));
+    expect(ledger.displayRate?.value).toBe("1.3500");
+  });
+
+  it("reports the period figures as unavailable (never a guess) when no rate can be obtained", async () => {
+    const ctx = await ownerReport();
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", (async (url: string) => {
+      calls.push(url);
+      throw new TypeError("network unreachable");
+    }) as unknown as typeof fetch);
+    const vm = await getOverview(ctx, { currency: "CAD" });
+    expect(calls.length).toBeGreaterThan(0);
+    expect(vm.combinedPeriod).toEqual({ status: "unavailable", incomeCad: null, accruedCad: null, givenCad: null, rate: null });
+    expect(vm.combined).toMatchObject({ status: "unavailable", totalCadMinor: null });
+    // The selected currency's figures are still there, unconverted.
+    expect(vm.periodSummary).toMatchObject({ currency: "CAD", netIncomeMinor: 520_300 });
+    const ledger = await getLedger(ctx);
+    expect(ledger.displayRate).toBeNull();
+  });
+
+  it("makes no outbound request and needs no conversion for a CAD-only owner", async () => {
+    const owner = await createTestUser("fx-cad-only@example.test");
+    const ctx = ctxFor(owner, noonToronto(today));
+    await createIncome(ctx, { idempotencyKey: key(), amount: "1,750.00", currency: "CAD", receivedOn: today });
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", (async (url: string) => {
+      calls.push(url);
+      throw new TypeError("network unreachable");
+    }) as unknown as typeof fetch);
+    const overview = await getOverview(ctx);
+    const ledger = await getLedger(ctx);
+    const given = await getGiven(ctx);
+    expect(calls).toEqual([]);
+    expect(overview.combinedPeriod.status).toBe("single_currency");
+    expect(overview.combined).toMatchObject({ status: "cad_only", totalCadMinor: 17_500 });
+    expect(ledger.displayRate).toBeNull();
+    expect(given.combined.status).toBe("cad_only");
+  });
+
+  it("keeps a period with only the selected currency active as it is, and converts one with only the other", async () => {
+    const owner = await createTestUser("fx-one-period@example.test");
+    // USD income in 2026, CAD income only in 2027: each year has one active currency.
+    await createIncome(ctxFor(owner, noonToronto("2026-10-03")), { idempotencyKey: key(), amount: "100.00", currency: "USD", receivedOn: "2026-10-03" });
+    await createIncome(ctxFor(owner, noonToronto("2027-01-05")), { idempotencyKey: key(), amount: "200.00", currency: "CAD", receivedOn: "2027-01-05" });
+    const ctx = ctxFor(owner, noonToronto("2027-01-05"));
+    const y2027 = await withTestRate("1.3500", () => getOverview(ctx, { period: "2027", currency: "CAD" }));
+    expect(y2027.combinedPeriod.status).toBe("single_currency");
+    // USD selected in a CAD-only year: the CAD income is still counted (exact, no rate needed).
+    const y2027usd = await withTestRate("1.3500", () => getOverview(ctx, { period: "2027", currency: "USD" }));
+    expect(y2027usd.combinedPeriod).toMatchObject({
+      status: "combined",
+      incomeCad: { totalCadMinor: 20_000, cadMinor: 20_000, usdMinor: 0, usdInCadMinor: 0 },
+      rate: null,
+    });
+    // CAD selected in a USD-only year: the USD income is converted rather than shown as CAD 0.00.
+    const y2026 = await withTestRate("1.3500", () => getOverview(ctx, { period: "2026", currency: "CAD" }));
+    expect(y2026.combinedPeriod.status).toBe("combined");
+    expect(y2026.combinedPeriod.incomeCad).toEqual({ totalCadMinor: 13_500, cadMinor: 0, usdMinor: 10_000, usdInCadMinor: 13_500 });
+    expect(y2026.combinedPeriod.rate?.value).toBe("1.3500");
+    const all = await withTestRate("1.3500", () => getOverview(ctx, { period: "all", currency: "CAD" }));
+    expect(all.combinedPeriod.status).toBe("combined");
+    expect(all.combinedPeriod.incomeCad?.totalCadMinor).toBe(20_000 + 13_500);
+    expect(all.periodBuckets).toEqual({ CAD: null, USD: null });
   });
 });

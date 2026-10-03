@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { toLocalDate, toMinor, type BucketPosition, type PeriodSummary } from "@/domain";
 import type { CurrencyHeadlineVM } from "@/lib/view-models";
-import { balanceNotes, monthlyGivenNote, overviewHref, payoutReviewHref, payoutWindow, periodStatNotes } from "./overview-text";
+import {
+  balanceNotes,
+  combinedPeriodStatNotes,
+  monthlyGivenNote,
+  overviewHref,
+  payoutReviewHref,
+  payoutWindow,
+  periodStatNotes,
+} from "./overview-text";
 
 const m = toMinor;
 const range = { key: 2026, start: toLocalDate("2026-10-03"), end: toLocalDate("2026-12-31"), label: "Oct 3 – Dec 31, 2026" } as const;
@@ -144,5 +152,38 @@ describe("payoutWindow", () => {
   it("clamps after the payout date and handles a payout on the first day", () => {
     expect(payoutWindow(d("2026-12-31"), d("2026-10-03"), d("2027-01-05")).fraction).toBe(1);
     expect(payoutWindow(d("2026-10-03"), d("2026-10-03"), d("2026-10-03")).fraction).toBe(1);
+  });
+});
+
+describe("combinedPeriodStatNotes", () => {
+  const base: PeriodSummary = {
+    currency: "CAD",
+    range,
+    grossIncomeMinor: m(520_300),
+    refundedMinor: m(0),
+    netIncomeMinor: m(520_300),
+    accruedMinor: m(52_030),
+    openingMinor: m(0),
+    givenMinor: m(0),
+    creditAppliedMinor: m(0),
+    outstandingMinor: m(52_030),
+    entryCount: 2,
+  };
+  const usd: PeriodSummary = { ...base, currency: "USD", grossIncomeMinor: m(175_000), netIncomeMinor: m(175_000), accruedMinor: m(17_500), entryCount: 1 };
+
+  it("counts entries across both currencies", () => {
+    expect(combinedPeriodStatNotes({ CAD: base, USD: usd }, { CAD: null, USD: null })).toEqual({ income: "3 entries" });
+  });
+
+  it("keeps refunds, opening balances and credit in their own currency", () => {
+    const notes = combinedPeriodStatNotes(
+      { CAD: { ...base, refundedMinor: m(5_000), openingMinor: m(2_000) }, USD: { ...usd, refundedMinor: m(2_500) } },
+      { CAD: null, USD: bucket(2026, { currency: "USD", overCoveredMinor: m(1_000), allocatedMinor: m(3_000) }) },
+    );
+    expect(notes).toEqual({
+      income: "3 entries · after CAD 50.00 and USD 25.00 in refunds",
+      accrued: "Includes CAD 20.00 opening balance",
+      given: "USD 10.00 beyond this period's tithe (after refunds) counts as credit",
+    });
   });
 });

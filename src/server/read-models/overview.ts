@@ -11,13 +11,17 @@ import {
   monthlyBreakdown,
   periodRange,
   summarizePeriod,
+  type BucketPosition,
+  type Currency,
   type LocalDate,
   type PeriodKey,
   type PeriodRange,
+  type PeriodSummary,
 } from "@/domain";
 import type { OverviewVM, PeriodOptionVM, PeriodProgressVM } from "@/lib/view-models";
 import { withOwnerSnapshot } from "@/server/db/with-owner";
-import { combinedStillToGive } from "@/server/fx/combined";
+import { combinedPeriodFigures, combinedStillToGiveFrom } from "@/lib/combined-figures";
+import { displayRateFor, stillToGiveOf } from "@/server/fx/combined";
 import type { ServiceContext } from "@/server/services/context";
 
 import { categoriesOf, currencyParam, headlinesFrom, incomeRowVM, isEmptySnapshot, loadComputedLedgerTx } from "./common";
@@ -69,6 +73,14 @@ export async function getOverview(ctx: ServiceContext, params: OverviewParams = 
   const key = resolvePeriodKey(params.period, years, today);
   const range = periodRange(key, tracking.trackingStart, today, snapshot);
   const balance = balances[currency];
+  const periodSummaries: Record<Currency, PeriodSummary> = {
+    CAD: summarizePeriod(balances.CAD, snapshot, key, tracking.trackingStart, today),
+    USD: summarizePeriod(balances.USD, snapshot, key, tracking.trackingStart, today),
+  };
+  const bucketOf = (c: Currency): BucketPosition | null =>
+    typeof key === "number" ? (balances[c].buckets.find((b) => b.year === key) ?? null) : null;
+  // One rate lookup (outside the read transaction) serves the combined still-to-give and the period figures.
+  const rate = await displayRateFor(balances, ctx.now);
 
   return {
     today,
@@ -78,7 +90,10 @@ export async function getOverview(ctx: ServiceContext, params: OverviewParams = 
     headlines: headlinesFrom(balances, today),
     period: range,
     periodOptions: periodOptionsFor(years),
-    periodSummary: summarizePeriod(balance, snapshot, key, tracking.trackingStart, today),
+    periodSummary: periodSummaries[currency],
+    periodSummaries,
+    periodBuckets: { CAD: bucketOf("CAD"), USD: bucketOf("USD") },
+    combinedPeriod: combinedPeriodFigures(periodSummaries, rate, currency),
     payout: computePayoutStatus({
       today,
       plannedDate: tracking.nextPayoutDate,
@@ -93,6 +108,6 @@ export async function getOverview(ctx: ServiceContext, params: OverviewParams = 
     buckets: balance.buckets,
     categories: categoriesOf(snapshot),
     isEmpty: isEmptySnapshot(snapshot),
-    combined: await combinedStillToGive(balances, ctx.now),
+    combined: combinedStillToGiveFrom(stillToGiveOf(balances), rate),
   };
 }

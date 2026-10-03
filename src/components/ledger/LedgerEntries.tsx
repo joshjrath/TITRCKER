@@ -3,7 +3,7 @@
 import { useId, useState, type RefObject } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { cn } from "@/components/ui";
-import type { IncomeRowVM } from "@/lib/view-models";
+import type { FxRateVM, IncomeRowVM } from "@/lib/view-models";
 import { LedgerFilters } from "./LedgerFilters";
 import { LedgerList } from "./LedgerList";
 import { LedgerNoMatches } from "./LedgerEmpty";
@@ -23,6 +23,8 @@ export interface LedgerEntriesProps {
   totalCount: number;
   totals: readonly CurrencyTotals[];
   filtered: boolean;
+  /** USD→CAD display rate for the combined filtered total (null when unavailable or USD has no activity). */
+  rate: FxRateVM | null;
   actions: LedgerRowActions;
   highlightFor: HighlightFor;
 }
@@ -72,7 +74,7 @@ export function LedgerEntries(props: LedgerEntriesProps) {
       </div>
 
       <div className="border-t border-line px-4 py-3 md:px-5">
-        <FilteredTotals totals={totals} shown={rows.length} total={props.totalCount} filtered={filtered} />
+        <FilteredTotals totals={totals} shown={rows.length} total={props.totalCount} filtered={filtered} rate={props.rate} />
       </div>
 
       {rows.length === 0 ? (

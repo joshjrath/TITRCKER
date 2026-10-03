@@ -12,7 +12,8 @@ import {
   type LedgerSort,
   type LedgerTotals,
 } from "@/domain";
-import type { IncomeRowVM } from "@/lib/view-models";
+import { combineInCad } from "@/lib/combined-figures";
+import type { CombinedAmountVM, FxRateVM, IncomeRowVM } from "@/lib/view-models";
 
 /** The domain sorts plus "Source Z–A". */
 export type LedgerSortKey = LedgerSort | "source_desc";
@@ -141,6 +142,23 @@ export type CurrencyTotals = LedgerTotals & { currency: Currency };
 export function selectionTotals(ledgerRows: readonly LedgerRow[]): CurrencyTotals[] {
   const totals = totalsByCurrency(ledgerRows);
   return CURRENCIES.filter((c) => totals[c].count > 0).map((currency) => ({ currency, ...totals[currency] }));
+}
+
+/** The filtered totals expressed in CAD (display-only), when the selection holds both currencies and a rate is known. */
+export interface CombinedSelectionTotals {
+  received: CombinedAmountVM;
+  refunded: CombinedAmountVM;
+  tithe: CombinedAmountVM;
+}
+
+export function combinedSelectionTotals(totals: readonly CurrencyTotals[], rate: FxRateVM | null): CombinedSelectionTotals | null {
+  const cad = totals.find((t) => t.currency === "CAD");
+  const usd = totals.find((t) => t.currency === "USD");
+  if (!cad || !usd || !rate) return null;
+  const received = combineInCad({ CAD: cad.grossMinor, USD: usd.grossMinor }, rate);
+  const refunded = combineInCad({ CAD: cad.refundedMinor, USD: usd.refundedMinor }, rate);
+  const tithe = combineInCad({ CAD: cad.titheMinor, USD: usd.titheMinor }, rate);
+  return received && refunded && tithe ? { received, refunded, tithe } : null;
 }
 
 export function entryCountText(count: number): string {

@@ -1,35 +1,47 @@
 import "server-only";
 
-import { combineStillToGiveInCad, FX_SOURCE_LABELS, toMinor, type CurrencyBalance, type Currency } from "@/domain";
-import type { CombinedTotalVM } from "@/lib/view-models";
+import type { Currency, CurrencyBalance, FxRate } from "@/domain";
+import { combinedStillToGiveFrom, fxRateVM } from "@/lib/combined-figures";
+import type { CombinedTotalVM, FxRateVM } from "@/lib/view-models";
 
 import { getUsdCadRate, type RateDeps } from "./rates";
 
+/** True when the USD ledger has any activity (income, refunds, payments, openings, set-aside) or anything owed. */
+export function usdHasActivity(balances: Record<Currency, CurrencyBalance>): boolean {
+  return balances.USD.hasActivity || balances.USD.stillToGiveMinor !== 0;
+}
+
 /**
- * Builds the display-only combined total. Looks up the exchange rate only when something is owed in USD, so a
- * CAD-only owner never triggers an outbound request. Call it OUTSIDE any database transaction.
+ * The USD→CAD display rate for a read model, looked up once and reused for every combined figure on the page.
+ * Looks it up only when the USD ledger has activity, so a CAD-only owner never triggers an outbound request.
+ * Call it OUTSIDE any database transaction (it may hit the network on the very first lookup).
+ */
+export async function displayRateFor(
+  balances: Record<Currency, CurrencyBalance>,
+  now: Date,
+  deps: RateDeps = {},
+): Promise<FxRateVM | null> {
+  if (!usdHasActivity(balances)) return null;
+  const rate: FxRate | null = await getUsdCadRate(now, deps);
+  return rate ? fxRateVM(rate) : null;
+}
+
+/** Per-currency still to give. */
+export function stillToGiveOf(balances: Record<Currency, CurrencyBalance>) {
+  return { CAD: balances.CAD.stillToGiveMinor, USD: balances.USD.stillToGiveMinor };
+}
+
+/**
+ * Builds the display-only combined total on its own (pages that need no other combined figure). Looks up the rate
+ * only when something is owed in USD. Call it OUTSIDE any database transaction.
  */
 export async function combinedStillToGive(
   balances: Record<Currency, CurrencyBalance>,
   now: Date,
   deps: RateDeps = {},
 ): Promise<CombinedTotalVM> {
-  const cadMinor = balances.CAD.stillToGiveMinor;
-  const usdMinor = balances.USD.stillToGiveMinor;
-  if (usdMinor === 0) {
-    return { status: "cad_only", totalCadMinor: cadMinor, cadMinor, usdMinor, usdInCadMinor: toMinor(0), rate: null };
-  }
+  const owed = stillToGiveOf(balances);
+  if (owed.USD === 0) return combinedStillToGiveFrom(owed, null);
   const rate = await getUsdCadRate(now, deps);
-  const combined = combineStillToGiveInCad({ CAD: cadMinor, USD: usdMinor }, rate);
-  if (!combined || !rate) {
-    return { status: "unavailable", totalCadMinor: null, cadMinor, usdMinor, usdInCadMinor: null, rate: null };
-  }
-  return {
-    status: "combined",
-    totalCadMinor: combined.totalCadMinor,
-    cadMinor,
-    usdMinor,
-    usdInCadMinor: combined.usdInCadMinor,
-    rate: { value: rate.rate, observedOn: rate.observedOn, sourceLabel: FX_SOURCE_LABELS[rate.source], stale: rate.stale },
-  };
+  return combinedStillToGiveFrom(owed, rate ? fxRateVM(rate) : null);
 }

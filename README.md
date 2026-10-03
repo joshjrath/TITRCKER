@@ -67,6 +67,12 @@ The full specification is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
   data is sent.
 - **Shown with it:** CAD and USD always appear separately underneath, with the rate, its source and its date. Ledger
   and Given show the same total as a short line.
+- **Period figures and ledger totals:** when both currencies have activity in the selected period (or only the one the
+  switch isn't on), the Overview's **Income received**, **Tithe accrued** and **Given** also show one combined amount
+  in CAD (marked ≈ when USD was converted), with the separate amounts listed underneath ("CAD 5,203.00 · USD 1,750.00"). The CAD/USD switch at the
+  top then only picks the currency of the charts and the monthly breakdown. On the Ledger, a line under the
+  per-currency totals adds them up in CAD whenever the rows on screen include both currencies ("Total ≈ CAD 7,678.38
+  received · ≈ CAD 767.84 tithe (USD at 1.4145)").
 - **What it doesn't affect:** the conversion is for display only. Payments, allocations, credits, set aside and exports
   stay in their original currencies.
 - **If the rate services can't be reached:** the last known rate is used and labelled "last available rate". With no

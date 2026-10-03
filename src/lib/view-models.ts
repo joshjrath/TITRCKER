@@ -87,13 +87,47 @@ export interface CombinedTotalVM {
   cadMinor: Minor;
   usdMinor: Minor;
   usdInCadMinor: Minor | null;
-  rate: {
-    value: string;
-    observedOn: LocalDate;
-    sourceLabel: string;
-    /** The newest rate is older than expected (providers unreachable); shown as "last available rate". */
-    stale: boolean;
-  } | null;
+  rate: FxRateVM | null;
+}
+
+/** The USD→CAD display rate as the UI shows it (value, source and observation date). */
+export interface FxRateVM {
+  /** Decimal string such as "1.4145". */
+  value: string;
+  observedOn: LocalDate;
+  sourceLabel: string;
+  /** The newest rate is older than expected (providers unreachable); shown as "last available rate". */
+  stale: boolean;
+}
+
+/** One figure expressed in CAD: the CAD part, the USD part, and the USD part converted (display-only). */
+export interface CombinedAmountVM {
+  /** CAD part plus the converted USD part. */
+  totalCadMinor: Minor;
+  cadMinor: Minor;
+  usdMinor: Minor;
+  usdInCadMinor: Minor;
+}
+
+/**
+ * The selected period's figures in CAD (display-only; ARCHITECTURE §3.10). Each currency's figures stay available
+ * separately in `OverviewVM.periodSummaries`.
+ */
+export interface CombinedPeriodVM {
+  /**
+   * single_currency: only the selected currency (or nothing) has activity in the period (shown as they are);
+   * combined: the other currency has activity too (or only it does) and any USD could be converted;
+   * unavailable: there is USD to convert but no rate.
+   */
+  status: "single_currency" | "combined" | "unavailable";
+  /** Income received (after refunds), in CAD. Null unless combined. */
+  incomeCad: CombinedAmountVM | null;
+  /** Tithe accrued, in CAD. Null unless combined. */
+  accruedCad: CombinedAmountVM | null;
+  /** Given in the period, in CAD. Null unless combined. */
+  givenCad: CombinedAmountVM | null;
+  /** The rate used. Null unless combined with some USD converted (a CAD + USD 0.00 figure needs no rate). */
+  rate: FxRateVM | null;
 }
 
 export interface PeriodOptionVM {
@@ -120,7 +154,14 @@ export interface OverviewVM {
   headlines: CurrencyHeadlineVM[];
   period: PeriodRange;
   periodOptions: PeriodOptionVM[];
+  /** The selected period in the selected currency (drives the chart's currency and the notes). */
   periodSummary: PeriodSummary;
+  /** The selected period in each currency. */
+  periodSummaries: Record<Currency, PeriodSummary>;
+  /** The selected period's bucket per currency (year periods only; null for all time or a year without records). */
+  periodBuckets: Record<Currency, BucketPosition | null>;
+  /** The selected period's figures combined in CAD when both currencies have activity in it (display-only). */
+  combinedPeriod: CombinedPeriodVM;
   payout: PayoutStatus;
   periodProgress: PeriodProgressVM;
   chart: CumulativeSeries;
@@ -157,6 +198,11 @@ export interface LedgerVM {
   headlines: CurrencyHeadlineVM[];
   categories: string[];
   combined: CombinedTotalVM;
+  /**
+   * The USD→CAD display rate, present whenever the USD ledger has activity and a rate could be obtained, so the
+   * filtered totals can also be shown combined in CAD. Null otherwise.
+   */
+  displayRate: FxRateVM | null;
 }
 
 export interface PaymentAllocationVM {

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { CURRENCIES, type Currency } from './constants';
 import { toLocalDate } from './dates';
 import { sumMinor, toMinor } from './money';
-import { carriedOverMinor, computeBalances, outstandingBuckets, summarizePeriod } from './balances';
+import { carriedOverMinor, computeBalances, outstandingBuckets, periodHasActivity, summarizePeriod } from './balances';
 import type { AdjustmentRecord, IncomeRecord, LedgerSnapshot, PaymentRecord } from './records';
 import { adjustment, d, income, m, opening, payment, resetFixtureSequence, setAside, snapshot } from './testFixtures';
 
@@ -257,6 +257,27 @@ describe('summarizePeriod', () => {
     const summary = summarizePeriod(cad, s, 2028, trackingStart, d('2028-01-02'));
     expect(summary).toMatchObject({ accruedMinor: 0, outstandingMinor: 0, entryCount: 0 });
     expect(summary.range.start).toBe('2028-01-01');
+  });
+});
+
+describe('periodHasActivity', () => {
+  it('is true for a period with income, opening balance or payments, and false for an empty one', () => {
+    const s = snapshot({
+      incomes: [income({ amount: '100.00', on: '2026-10-03' }), income({ amount: '50.00', on: '2026-10-03', currency: 'USD' })],
+      openings: [opening({ amount: '20.00', on: '2026-05-01' })],
+    });
+    const balances = computeBalances(s, trackingStart);
+    const today = d('2027-01-02');
+    expect(periodHasActivity(summarizePeriod(balances.CAD, s, 2026, trackingStart, today))).toBe(true);
+    expect(periodHasActivity(summarizePeriod(balances.USD, s, 2026, trackingStart, today))).toBe(true);
+    expect(periodHasActivity(summarizePeriod(balances.USD, s, 2027, trackingStart, today))).toBe(false);
+    expect(periodHasActivity(summarizePeriod(balances.CAD, s, 2027, trackingStart, today))).toBe(false);
+  });
+
+  it('counts an opening balance alone as activity', () => {
+    const s = snapshot({ openings: [opening({ amount: '20.00', on: '2026-05-01', currency: 'USD' })] });
+    const usd = computeBalances(s, trackingStart).USD;
+    expect(periodHasActivity(summarizePeriod(usd, s, 'all', trackingStart, d('2026-10-03')))).toBe(true);
   });
 });
 
