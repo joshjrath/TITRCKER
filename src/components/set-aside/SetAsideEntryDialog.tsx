@@ -98,6 +98,11 @@ export function SetAsideEntryDialog({ open, onClose, today, defaultCurrency, bal
       onRequestClose={guard}
       title="Add a Set aside entry"
       description="Your own record of money reserved for your tithe. It doesn't change what you owe."
+      phoneAction={
+        <Button type="submit" form={formId} size="sm" loading={pending} loadingLabel="Saving…">
+          Save
+        </Button>
+      }
       footer={
         <>
           <Button variant="ghost" onClick={() => guard() && onClose()} disabled={pending}>

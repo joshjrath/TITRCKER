@@ -70,6 +70,11 @@ export function EditPaymentDialog({ payment, open, onClose }: EditPaymentDialogP
       onRequestClose={guard}
       title="Edit payment details"
       description={`${formatMoney(payment.amountMinor, payment.currency)} paid ${formatLocalDate(payment.paidOn)}. To change the amount, date or split, reverse this payment and record it again.`}
+      phoneAction={
+        <Button type="submit" form={formId} size="sm" loading={pending} loadingLabel="Saving…">
+          Save
+        </Button>
+      }
       footer={
         <>
           <Button variant="ghost" onClick={() => guard() && onClose()} disabled={pending}>

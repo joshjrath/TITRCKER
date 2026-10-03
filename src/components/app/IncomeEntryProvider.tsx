@@ -1,8 +1,8 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { useHighlight } from "@/components/motion";
-import { Sheet, useToast } from "@/components/ui";
+import { Button, Sheet, useToast } from "@/components/ui";
 import { IncomeForm } from "@/components/income/IncomeForm";
 import type { IncomeFormDefaults } from "@/components/income/form-state";
 import { incomeSavedMessage } from "@/components/income/messages";
@@ -55,6 +55,8 @@ export function IncomeEntryProvider({ defaults, children }: IncomeEntryProviderP
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const formElementId = useId();
   const [lastSaved, setLastSaved] = useState<LastSavedIncome | null>(null);
   const dirtyRef = useRef(false);
   const tokenRef = useRef(0);
@@ -88,11 +90,19 @@ export function IncomeEntryProvider({ defaults, children }: IncomeEntryProviderP
         onRequestClose={() => !dirtyRef.current || window.confirm(DISCARD_PROMPT)}
         title="Add income"
         description="Enter money you received. Tenth adds 10% to what you still have to give."
+        phoneAction={
+          <Button type="submit" form={formElementId} size="sm" loading={saving} loadingLabel="Saving…">
+            Save
+          </Button>
+        }
       >
         <IncomeForm
           key={formKey}
+          id={formElementId}
           mode="create"
           defaults={defaults}
+          inlineSubmit="desktop"
+          onPendingChange={setSaving}
           onDirtyChange={(dirty) => {
             dirtyRef.current = dirty;
           }}

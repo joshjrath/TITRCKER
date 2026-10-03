@@ -4,7 +4,6 @@ import { useCallback, useEffect, useId, useRef, type MouseEvent, type ReactNode,
 import { X } from "lucide-react";
 import { cn } from "./cn";
 import { IconButton } from "./IconButton";
-import { useSheetViewport } from "./sheet-viewport";
 
 export interface DialogProps {
   open: boolean;
@@ -20,6 +19,12 @@ export interface DialogProps {
   children: ReactNode;
   /** Actions row. To submit a form in the body, give the form an id and the button `form="that-id"`. */
   footer?: ReactNode;
+  /**
+   * Sheets only: the primary action shown in the title bar on phones (e.g. a small "Save" submit button with
+   * `form="that-id"`). Phones show sheets full screen, and the on-screen keyboard covers the bottom of the screen,
+   * so the main action must live at the top. When set, the footer is hidden on phones (the ✕ button cancels).
+   */
+  phoneAction?: ReactNode;
   size?: "sm" | "md" | "lg";
   /** Element to focus on open. Defaults to [data-autofocus], else the first field, else the first focusable. */
   initialFocusRef?: RefObject<HTMLElement | null>;
@@ -44,6 +49,7 @@ function DialogBase({
   description,
   children,
   footer,
+  phoneAction,
   size = "md",
   initialFocusRef,
   closeLabel = "Close",
@@ -56,8 +62,6 @@ function DialogBase({
   const pointerDownOnBackdrop = useRef(false);
   const titleId = useId();
   const descId = useId();
-  // Keep the dialog inside the visible area when an on-screen keyboard is up (see sheet-viewport.ts).
-  useSheetViewport(ref, open);
 
   // Keep the latest callbacks without re-running the open/close effect.
   const onCloseRef = useRef(onClose);
@@ -153,7 +157,10 @@ function DialogBase({
                 </p>
               ) : null}
             </div>
-            <IconButton aria-label={closeLabel} icon={<X />} onClick={requestClose} className="-mr-2 -mt-1" />
+            <div className="-mr-2 -mt-1 flex shrink-0 items-center gap-1">
+              {variant === "sheet" && phoneAction ? <div className="sm:hidden">{phoneAction}</div> : null}
+              <IconButton aria-label={closeLabel} icon={<X />} onClick={requestClose} />
+            </div>
           </header>
           <div
             ref={bodyRef}
@@ -163,7 +170,12 @@ function DialogBase({
             {children}
           </div>
           {footer ? (
-            <footer className="flex shrink-0 flex-col-reverse gap-2 border-t border-line px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+            <footer
+              className={cn(
+                "flex shrink-0 flex-col-reverse gap-2 border-t border-line px-5 py-4 sm:flex-row sm:justify-end sm:px-6",
+                variant === "sheet" && phoneAction ? "max-sm:hidden" : null,
+              )}
+            >
               {footer}
             </footer>
           ) : null}
@@ -182,7 +194,10 @@ export function Dialog(props: DialogProps) {
   return <DialogBase {...props} variant="dialog" />;
 }
 
-/** Same API as Dialog: a bottom sheet below 640px, a centered dialog above. The handle is visual only. */
+/**
+ * Same API as Dialog: a full-screen form below 640px (top-anchored, so the on-screen keyboard never hides the fields
+ * being typed in; pass `phoneAction` for the title-bar action) and a centered dialog above.
+ */
 export function Sheet(props: DialogProps) {
   return <DialogBase {...props} variant="sheet" />;
 }

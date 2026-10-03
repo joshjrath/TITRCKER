@@ -33,6 +33,12 @@ export interface IncomeFormProps {
   onDirtyChange?: (dirty: boolean) => void;
   /** Quick-entry layout: optional fields sit behind an "Add details" disclosure. */
   compact?: boolean;
+  /** id of the <form>, so a button elsewhere (a sheet's title-bar Save on phones) can submit it with form="…". */
+  id?: string;
+  /** Reports save progress, for an external submit button's loading state. */
+  onPendingChange?: (pending: boolean) => void;
+  /** "desktop": hide the form's own Save button below 640px, where the sheet's title bar carries it instead. */
+  inlineSubmit?: "always" | "desktop";
   className?: string;
 }
 
@@ -62,7 +68,18 @@ function hasDetails(v: IncomeFormValues): boolean {
  * and one idempotency key per form instance (regenerated only after ok: true), so double clicks and retries
  * never save twice. On failure the typed values stay and errors show next to their fields.
  */
-export function IncomeForm({ mode, initial, defaults, onSaved, onDirtyChange, compact = false, className }: IncomeFormProps) {
+export function IncomeForm({
+  mode,
+  initial,
+  defaults,
+  onSaved,
+  onDirtyChange,
+  compact = false,
+  id,
+  onPendingChange,
+  inlineSubmit = "always",
+  className,
+}: IncomeFormProps) {
   const router = useRouter();
   const formId = useId();
   const detailsId = `${formId}-details`;
@@ -80,6 +97,11 @@ export function IncomeForm({ mode, initial, defaults, onSaved, onDirtyChange, co
 
   // Report dirtiness to the container (dialog guard) without re-subscribing on every render.
   const onDirtyRef = useRef(onDirtyChange);
+  // Keep an external submit button (a sheet's title-bar Save on phones) in step with the save.
+  useEffect(() => {
+    onPendingChange?.(pending);
+  }, [pending, onPendingChange]);
+
   useEffect(() => {
     onDirtyRef.current = onDirtyChange;
   });
@@ -174,7 +196,7 @@ export function IncomeForm({ mode, initial, defaults, onSaved, onDirtyChange, co
       : undefined;
 
   return (
-    <form onSubmit={submit} noValidate aria-busy={pending || undefined} className={cn("flex flex-col gap-4", className)}>
+    <form id={id} onSubmit={submit} noValidate aria-busy={pending || undefined} className={cn("flex flex-col gap-4", className)}>
       <Field label="Amount received" required error={errors.amount ?? errors.currency} hint={refundHint}>
         <AmountInput
           ref={amountRef}
@@ -251,8 +273,7 @@ export function IncomeForm({ mode, initial, defaults, onSaved, onDirtyChange, co
         </InlineAlert>
       ) : null}
 
-      {/* In a phone sheet this row sticks to the bottom so Save stays visible above the keyboard. */}
-      <div data-sticky-submit>
+      <div className={inlineSubmit === "desktop" ? "max-sm:hidden" : undefined}>
         <Button type="submit" size={compact ? "md" : "lg"} fullWidth loading={pending} loadingLabel="Saving…">
           {mode === "edit" ? "Save changes" : "Save income"}
         </Button>

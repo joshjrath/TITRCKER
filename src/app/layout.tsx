@@ -66,8 +66,6 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  // Android Chrome: shrink the layout viewport when the keyboard opens, so bottom sheets sit above it.
-  interactiveWidget: "resizes-content",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

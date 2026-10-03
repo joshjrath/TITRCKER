@@ -198,6 +198,11 @@ export function PaymentDialog({ open, onClose, mode, context, onRecorded }: Paym
           ? "Check the amount and what it covers. Nothing is recorded until you confirm you made the payment."
           : "Record money you already gave to your church. Tenth never moves money."
       }
+      phoneAction={
+        <Button type="submit" form={formId} size="sm" loading={pending} loadingLabel="Recording…">
+          Record
+        </Button>
+      }
       footer={
         <>
           <Button variant="ghost" onClick={() => guard() && onClose()} disabled={pending}>
