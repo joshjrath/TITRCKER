@@ -78,10 +78,14 @@ async function store(rate: ProviderRate, now: Date): Promise<void> {
     });
 }
 
-async function refresh(now: Date, deps: RateDeps): Promise<FxRate | null> {
-  const cached = await latestCached();
-  if (cached && now.getTime() - cached.fetchedAt.getTime() < FX_REFRESH_AFTER_MS) return toFxRate(cached, now);
+/** After every provider has failed, this process waits this long before asking them again. */
+export const FX_RETRY_AFTER_FAILURE_MS = 10 * 60 * 1000;
 
+let inflight: Promise<FxRate | null> | null = null;
+let lastFailureAt: number | null = null;
+
+/** Asks the providers in order and stores the first valid rate. Null when every provider failed. */
+async function fetchAndStore(now: Date, deps: RateDeps): Promise<FxRate | null> {
   for (const provider of deps.providers ?? FX_PROVIDERS) {
     const fetched = await fetchProviderRate(provider, deps.fetchImpl);
     if (!fetched) {
@@ -93,31 +97,59 @@ async function refresh(now: Date, deps: RateDeps): Promise<FxRate | null> {
     } catch (err) {
       logEvent("warn", "fx.store_failed", { source: provider.source, error: err instanceof Error ? err.name : "unknown" });
     }
+    lastFailureAt = null;
     return toFxRate({ ...fetched, fetchedAt: now }, now);
   }
-  logEvent("warn", "fx.refresh_failed", { cached: cached !== null });
-  return cached ? toFxRate(cached, now) : null;
+  lastFailureAt = now.getTime();
+  logEvent("warn", "fx.refresh_failed", {});
+  return null;
 }
 
-let inflight: Promise<FxRate | null> | null = null;
+/** Starts (or joins) the single in-process refresh. */
+function startRefresh(now: Date, deps: RateDeps): Promise<FxRate | null> {
+  if (!inflight) {
+    inflight = fetchAndStore(now, deps)
+      .catch(() => null)
+      .finally(() => {
+        inflight = null;
+      });
+  }
+  return inflight;
+}
 
 /**
- * The current USD→CAD rate for the combined total: the cached rate while it is fresh, otherwise a new one from the
- * Bank of Canada (falling back to the ECB), otherwise the last cached rate flagged `stale`, otherwise null.
- * Concurrent callers in one process share a single refresh.
+ * The current USD→CAD rate for the combined total. Never makes a page wait on a slow or unreachable provider when
+ * any rate is already stored:
+ * - a cached rate younger than {@link FX_REFRESH_AFTER_MS} is returned as is;
+ * - an older cached rate is returned immediately (flagged `stale` once it is old) while a background refresh
+ *   updates the cache for the next request;
+ * - only when nothing is stored yet does the caller wait for the providers (Bank of Canada, then the ECB);
+ * - after every provider has failed, they are not asked again for {@link FX_RETRY_AFTER_FAILURE_MS}.
  */
 export async function getUsdCadRate(now: Date, deps: RateDeps = {}): Promise<FxRate | null> {
   const fixture = testFixtureRate(now);
   if (fixture) return fixture;
-  if (!inflight) {
-    inflight = refresh(now, deps).finally(() => {
-      inflight = null;
-    });
-  }
   try {
-    return await inflight;
+    const cached = await latestCached();
+    if (cached && now.getTime() - cached.fetchedAt.getTime() < FX_REFRESH_AFTER_MS) return toFxRate(cached, now);
+    const recentlyFailed = lastFailureAt !== null && now.getTime() - lastFailureAt < FX_RETRY_AFTER_FAILURE_MS;
+    if (cached) {
+      if (!recentlyFailed) void startRefresh(now, deps);
+      return toFxRate(cached, now);
+    }
+    if (recentlyFailed) return null;
+    return await startRefresh(now, deps);
   } catch (err) {
     logEvent("warn", "fx.unavailable", { error: err instanceof Error ? err.name : "unknown" });
     return null;
   }
+}
+
+/** Test helpers: wait for a background refresh, and forget in-process failure state between tests. */
+export function pendingFxRefresh(): Promise<unknown> {
+  return inflight ?? Promise.resolve();
+}
+export function resetFxStateForTests(): void {
+  inflight = null;
+  lastFailureAt = null;
 }

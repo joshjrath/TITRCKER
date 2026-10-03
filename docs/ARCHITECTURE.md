@@ -187,10 +187,11 @@ Worked example (CAD): income 1,750.00 + 249.99 gives accrued 200.00. Give 50.00 
   credentials and no personal data, using a 3 s timeout and a 64 KB cap, and validates payloads strictly (bounds
   0.5–3.0).
 * **Caching:** rates are stored in `exchange_rate`, which is public reference data with no RLS. A cached rate younger
-  than 6 hours is reused. Otherwise the providers are asked again, and only one request runs per process at a time.
-  If every provider fails, the last stored rate is used and labelled "last available rate" once it is more than
-  4 days old. With no rate at all, the UI shows the currencies separately and says the combined total is unavailable.
-  It never shows a guessed number.
+  than 6 hours is used as is. An older cached rate is shown immediately while a background refresh (one per process)
+  updates the cache, so no page ever waits on a provider when any rate is stored. It is labelled "last available rate"
+  once it is more than 4 days old. The very first lookup, with nothing stored, waits at most about 2.5 s per provider.
+  After every provider fails, they are not asked again for 10 minutes. With no rate at all, the UI shows the currencies
+  separately and says the combined total is unavailable. It never shows a guessed number.
 * A rate is looked up only when something is owed in USD, so a CAD-only account makes no outbound requests.
 
 ---

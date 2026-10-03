@@ -62,8 +62,9 @@ The full specification is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 - **What it shows:** the Overview's top figure becomes **≈ Total still to give · in CAD** once you have USD activity.
   It is CAD still to give plus USD still to give converted at the latest official USD→CAD rate.
 - **Where the rate comes from:** the server fetches the rate from the Bank of Canada (European Central Bank via
-  Frankfurter as a backup) and caches it in the database. It refreshes when the cached rate is more than 6 hours old,
-  so it follows each business day's published rate. No personal data is sent.
+  Frankfurter as a backup) and caches it in the database. It refreshes in the background once the cached rate is more
+  than 6 hours old, so it follows each business day's published rate without ever slowing a page down. No personal
+  data is sent.
 - **Shown with it:** CAD and USD always appear separately underneath, with the rate, its source and its date. Ledger
   and Given show the same total as a short line.
 - **What it doesn't affect:** the conversion is for display only. Payments, allocations, credits, set aside and exports

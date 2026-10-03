@@ -58,7 +58,7 @@ export const FX_PROVIDERS: readonly FxProvider[] = [
   },
 ];
 
-const FETCH_TIMEOUT_MS = 3_000;
+const FETCH_TIMEOUT_MS = 2_500;
 const MAX_BODY_BYTES = 64 * 1024;
 
 /** Fetches and parses one provider. Returns null on any network, size, status or format problem. */

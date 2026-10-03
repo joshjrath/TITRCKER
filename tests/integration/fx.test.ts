@@ -5,7 +5,7 @@ import { closeDb, getDb } from "@/server/db/client";
 import { exchangeRate } from "@/server/db/schema";
 import { combinedStillToGive } from "@/server/fx/combined";
 import { FX_PROVIDERS, type FxProvider } from "@/server/fx/providers";
-import { FX_REFRESH_AFTER_MS, getUsdCadRate } from "@/server/fx/rates";
+import { FX_REFRESH_AFTER_MS, FX_RETRY_AFTER_FAILURE_MS, getUsdCadRate, pendingFxRefresh, resetFxStateForTests } from "@/server/fx/rates";
 import { getOverview } from "@/server/read-models/overview";
 import { createIncome } from "@/server/services/income";
 
@@ -41,6 +41,7 @@ beforeEach(async () => {
   await resetAppData();
   await getDb().delete(exchangeRate);
   delete process.env.TENTH_FX_TEST_RATE;
+  resetFxStateForTests();
 });
 
 afterAll(async () => {
@@ -60,13 +61,27 @@ describe("getUsdCadRate", () => {
     expect(await getDb().select().from(exchangeRate)).toHaveLength(1);
   });
 
-  it("refreshes once the cached rate is older than the refresh window", async () => {
+  it("serves an older cached rate immediately and refreshes it in the background", async () => {
     await getUsdCadRate(NOW, { fetchImpl: fakeFetch({ [BOC]: () => new Response(bocBody("1.3712")) }).impl });
     const next = fakeFetch({ [BOC]: () => new Response(bocBody("1.3650", "2026-10-05")) });
     const later = new Date(NOW.getTime() + FX_REFRESH_AFTER_MS + 60_000);
-    const rate = await getUsdCadRate(later, { fetchImpl: next.impl });
-    expect(rate).toMatchObject({ rate: "1.3650", observedOn: "2026-10-05" });
+    // The page never waits on the provider when a rate is stored: it gets the cached one right away...
+    await expect(getUsdCadRate(later, { fetchImpl: next.impl })).resolves.toMatchObject({ rate: "1.3712" });
+    // ...while the background refresh stores the new rate for the next request.
+    await pendingFxRefresh();
     expect(next.calls).toHaveLength(1);
+    await expect(getUsdCadRate(later, { fetchImpl: next.impl })).resolves.toMatchObject({ rate: "1.3650", observedOn: "2026-10-05" });
+  });
+
+  it("does not ask the providers again for a while after they all failed", async () => {
+    const down = fakeFetch({});
+    await expect(getUsdCadRate(NOW, { fetchImpl: down.impl })).resolves.toBeNull();
+    const callsAfterFirst = down.calls.length;
+    await expect(getUsdCadRate(new Date(NOW.getTime() + 60_000), { fetchImpl: down.impl })).resolves.toBeNull();
+    expect(down.calls).toHaveLength(callsAfterFirst);
+    const up = fakeFetch({ [BOC]: () => new Response(bocBody("1.3712")) });
+    const afterBackoff = new Date(NOW.getTime() + FX_RETRY_AFTER_FAILURE_MS + 60_000);
+    await expect(getUsdCadRate(afterBackoff, { fetchImpl: up.impl })).resolves.toMatchObject({ rate: "1.3712" });
   });
 
   it("falls back to the ECB when the Bank of Canada is unreachable", async () => {
@@ -81,6 +96,7 @@ describe("getUsdCadRate", () => {
     const weekLater = new Date("2026-10-12T16:00:00Z");
     const rate = await getUsdCadRate(weekLater, { fetchImpl: fakeFetch({}).impl });
     expect(rate).toMatchObject({ rate: "1.3712", observedOn: "2026-10-02", stale: true });
+    await pendingFxRefresh();
   });
 
   it("returns null when nothing is cached and every provider fails or answers garbage", async () => {
