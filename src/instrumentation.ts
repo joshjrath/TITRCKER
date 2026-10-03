@@ -2,8 +2,8 @@ import type { Instrumentation } from "next";
 
 /**
  * Runs once when a server instance starts (never during `next build`).
- * Production: redact database errors from console output, refuse to start with a broken environment, and warn
- * loudly if the test clock override is enabled.
+ * Production: redact database errors from console output, refuse to start with a broken environment (including
+ * test mode without its explicit E2E opt-in), and warn loudly if the test clock override is enabled.
  */
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
@@ -18,7 +18,7 @@ export async function register(): Promise<void> {
 
   if (isTestModeEnabled()) {
     logEvent("warn", "startup.test_mode_enabled", {
-      detail: "TENTH_TEST_MODE=1 in production: the clock can be overridden with TENTH_TEST_NOW. Unset it.",
+      detail: "TENTH_TEST_MODE=1 in production: TENTH_TEST_NOW can override the clock. E2E builds only.",
     });
   }
 

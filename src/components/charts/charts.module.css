@@ -565,6 +565,40 @@
   color: var(--v-text);
 }
 
+.monthlyScroll {
+  overflow-x: auto;
+  border-radius: 6px;
+}
+
+.monthlyScroll:focus-visible {
+  outline: 2px solid var(--v-focus);
+  outline-offset: 2px;
+}
+
+.monthlyTableLong {
+  table-layout: auto;
+}
+
+.monthlyTableLong caption {
+  position: sticky;
+  left: 0;
+}
+
+.rowDetail {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  line-height: 1.3;
+  color: var(--v-text-3);
+}
+
+.monthlyNote {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--v-text-3);
+}
+
 .zero {
   color: var(--v-text-3);
 }

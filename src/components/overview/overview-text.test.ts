@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { toLocalDate, toMinor, type BucketPosition, type PeriodSummary } from "@/domain";
 import type { CurrencyHeadlineVM } from "@/lib/view-models";
-import { balanceNotes, overviewHref, payoutReviewHref, payoutWindow, periodStatNotes } from "./overview-text";
+import { balanceNotes, monthlyGivenNote, overviewHref, payoutReviewHref, payoutWindow, periodStatNotes } from "./overview-text";
 
 const m = toMinor;
 const range = { key: 2026, start: toLocalDate("2026-10-03"), end: toLocalDate("2026-12-31"), label: "Oct 3 – Dec 31, 2026" } as const;
@@ -100,13 +100,33 @@ describe("periodStatNotes", () => {
   it("notes refunds, opening balance and refund-driven over-coverage as credit", () => {
     const notes = periodStatNotes(
       { ...summary, refundedMinor: m(2_000), openingMinor: m(4_000), entryCount: 3 },
-      bucket(2026, { overCoveredMinor: m(2_500) }),
+      bucket(2026, { overCoveredMinor: m(2_500), allocatedMinor: m(5_000) }),
     );
     expect(notes).toEqual({
       income: "3 entries · after CAD 20.00 in refunds",
       accrued: "Includes CAD 40.00 opening balance",
       given: "CAD 25.00 beyond this period's tithe (after refunds) counts as credit",
     });
+  });
+
+  it("does not credit payments when nothing was allocated: refunds alone took the period below zero", () => {
+    const notes = periodStatNotes(
+      { ...summary, accruedMinor: m(-1_000), refundedMinor: m(10_000) },
+      bucket(2027, { accruedMinor: m(-1_000), overCoveredMinor: m(1_000), allocatedMinor: m(0) }),
+    );
+    expect(notes.given).toBeUndefined();
+    expect(notes.accrued).toBe("Refunds brought this period below zero — CAD 10.00 counts as credit");
+    const withOpening = periodStatNotes({ ...summary, openingMinor: m(500) }, bucket(2027, { overCoveredMinor: m(1_000) }));
+    expect(withOpening.accrued).toBe("Includes CAD 5.00 opening balance · Refunds brought this period below zero — CAD 10.00 counts as credit");
+  });
+});
+
+describe("monthlyGivenNote", () => {
+  it("explains what the Given column counts for a year and for all time", () => {
+    expect(monthlyGivenNote(2026)).toBe(
+      "Given counts payments allocated to this period, by the date they were made — the same as Given above.",
+    );
+    expect(monthlyGivenNote("all")).toBe("Given counts every payment, by the date it was made.");
   });
 });
 

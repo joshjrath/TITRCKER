@@ -61,7 +61,16 @@ export function TwoFactorSetupDialog({ open, onClose, account, today }: TwoFacto
       open={open}
       onClose={onClose}
       onRequestClose={guard}
-      title={step === "done" ? "Two-factor authentication is on" : "Set up two-factor authentication"}
+      title={
+        step === "done" ? (
+          "Two-factor authentication is on"
+        ) : (
+          // Keep "two-factor" whole so a narrow phone never breaks the title at its hyphen.
+          <>
+            Set up <span className="whitespace-nowrap">two-factor</span> authentication
+          </>
+        )
+      }
       description={step === "done" ? undefined : `Step ${stepIndex} of ${STEP_ORDER.length} · ${STEP_TITLES[step]}`}
       footer={
         <SetupFooter

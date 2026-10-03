@@ -15,7 +15,7 @@ import { createSetAside } from "@/server/services/set-aside";
 
 import { createTestUser, resetAppData } from "./helpers/db";
 import { addIncome, pay } from "./helpers/ledger";
-import { ctxFor, key, noonToronto } from "./helpers/services";
+import { ctxFor, expectServiceError, key, noonToronto } from "./helpers/services";
 
 afterAll(closeDb);
 
@@ -26,6 +26,30 @@ beforeEach(async () => {
 });
 
 const at = (date: string) => ctxFor(owner, noonToronto(date));
+
+describe("year boundary in the owner's time zone (America/Toronto)", () => {
+  // 2027-01-01T04:30Z is 23:30 EST on 2026-12-31 in Toronto: still the last day of 2026 and the default payout date.
+  const newYearsEveLate = () => ctxFor(owner, new Date("2027-01-01T04:30:00Z"));
+
+  it("accepts income dated 2026-12-31 into the 2026 period and rejects 2027-01-01 as a future date", async () => {
+    const ctx = newYearsEveLate();
+    const income = await createIncome(ctx, { idempotencyKey: key(), amount: "100.00", currency: "CAD", receivedOn: "2026-12-31" });
+    expect(income.receivedOn).toBe("2026-12-31");
+    await expectServiceError(
+      createIncome(ctx, { idempotencyKey: key(), amount: "100.00", currency: "CAD", receivedOn: "2027-01-01" }),
+      "validation",
+      "receivedOn",
+    );
+
+    const vm = await getOverview(ctx);
+    expect(vm.today).toBe("2026-12-31");
+    expect(vm.period).toMatchObject({ key: 2026, start: "2026-10-03", end: "2026-12-31" });
+    expect(vm.periodOptions.map((o) => o.key)).not.toContain("2027");
+    expect(vm.periodSummary).toMatchObject({ grossIncomeMinor: 10000, accruedMinor: 1000, entryCount: 1 });
+    expect(vm.buckets.map((b) => b.year)).toEqual([2026]);
+    expect(vm.payout).toMatchObject({ phase: "due_today", targetDate: "2026-12-31" });
+  });
+});
 
 describe("overview: periods and currency", () => {
   beforeEach(async () => {
@@ -48,10 +72,14 @@ describe("overview: periods and currency", () => {
     expect(y2026.periodSummary).toMatchObject({ grossIncomeMinor: 150000, accruedMinor: 15000, givenMinor: 12000, outstandingMinor: 3000, entryCount: 2 });
     expect(y2026.periodProgress.fraction).toBe(1);
     expect(y2026.chart.endValueMinor).toBe(15000);
-    expect(y2026.monthly.map((m) => [m.monthKey, m.titheMinor])).toEqual([
+    expect(y2026.monthly.filter((m) => m.kind === "month").map((m) => [m.monthKey, m.titheMinor])).toEqual([
       ["2026-10", 10000],
       ["2026-11", 5000],
       ["2026-12", 0],
+    ]);
+    // The 2027-01-04 payment allocated to 2026 lands in an "after" row, so the rows add up to the period's Given.
+    expect(y2026.monthly.filter((m) => m.kind !== "month")).toEqual([
+      expect.objectContaining({ kind: "after", titheMinor: 0, paidMinor: 12000 }),
     ]);
 
     const all = await getOverview(ctx, { period: "all" });
@@ -202,6 +230,11 @@ describe("export builders", () => {
     expect(backup.records.payments[0]).toMatchObject({ id: p.id, reversalReason: "Undo" });
     expect(backup.totals.CAD).toMatchObject({ accruedMinor: 1000, paidMinor: 0, stillToGiveMinor: 1000 });
     expect(backup.auditEvents.map((e) => e.action).sort()).toEqual(["create", "create", "create", "delete", "reverse"]);
+    // Audit snapshots are included: what each change did is recoverable from the backup alone.
+    const created = backup.auditEvents.find((e) => e.entityId === kept.id && e.action === "create");
+    expect(created).toMatchObject({ before: null, after: { id: kept.id, amountMinor: 10000 } });
+    const deleted = backup.auditEvents.find((e) => e.entityId === gone.id && e.action === "delete");
+    expect(deleted).toMatchObject({ before: { id: gone.id, deletedAt: null }, after: { id: gone.id, deletedReason: "Mistake" } });
     // Round-trips as JSON.
     expect(JSON.parse(JSON.stringify(backup))).toEqual(backup);
   });

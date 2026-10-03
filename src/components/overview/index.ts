@@ -1,7 +1,7 @@
 export { BalanceHero, type BalanceHeroProps } from "./BalanceHero";
 export { EmptyInvitation } from "./EmptyInvitation";
 export { OverviewCharts, type OverviewChartsProps } from "./OverviewCharts";
-export { CurrencySwitch, PeriodSelect, type CurrencySwitchProps, type PeriodSelectProps } from "./PeriodControls";
+export { CurrencySwitch, PeriodLabel, PeriodSelect, type CurrencySwitchProps, type PeriodSelectProps } from "./PeriodControls";
 export { QuickEntryPanel } from "./QuickEntryPanel";
 export { RecentEntries, type RecentEntriesProps } from "./RecentEntries";
 export { YearEndBlock, type YearEndBlockProps } from "./YearEndBlock";

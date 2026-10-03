@@ -55,7 +55,6 @@ export const MAX_SUPPORTED_YEAR = 2200;
 /** Calendar constants used by pure epoch-day arithmetic. */
 export const MS_PER_DAY = 86_400_000;
 export const DAYS_PER_WEEK = 7;
-export const MONTHS_PER_YEAR = 12;
 /** Weekday of 1970-01-01 (0 = Sunday ... 6 = Saturday): a Thursday. */
 export const EPOCH_WEEKDAY = 4;
 /** First and last month / day numbers of a calendar year. */

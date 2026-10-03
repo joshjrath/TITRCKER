@@ -63,7 +63,8 @@ Rules: `domain` imports nothing outside `domain`. `components` never import `ser
   mapped to a JS `number` and guarded with `Number.isSafeInteger`. Multiplication/division for the
   tithe uses `BigInt`. No floating-point arithmetic ever touches ledger math.
 * Supported currencies: `CAD` (default) and `USD`, both with 2 minor digits. CAD and USD ledgers are
-  fully independent. Nothing ever adds CAD to USD. Currency conversion is out of scope.
+  fully independent. Nothing in the ledger ever adds CAD to USD. The only conversion is the display-only combined
+  total in CAD described in §3.10.
 * **Safe limit:** a single amount (income, payment, refund, opening obligation, set-aside) must be
   between `0.01` and `999,999,999.99` inclusive (`MAX_AMOUNT_MINOR = 99_999_999_999`). Sums are checked with
   `Number.isSafeInteger`; that would only fail after ~90,000 maximum-size entries, and if it does the operation throws.
@@ -97,7 +98,8 @@ and anything above the safe limit.
 ### 3.4 Refunds / corrections
 * An adjustment is tied to one income entry, has its own effective date (>= the income's received date, <= today)
   and a required reason, and reduces the received amount by `amount_minor` (> 0).
-* Total active adjustments on an entry may never exceed its received amount.
+* Total active adjustments on an entry may never exceed its received amount. The services check this under the owner's
+  lock, and a deferred constraint trigger (`income_adjustment_sum_check`, migration 0004) enforces it again at commit.
 * Tithe change for adjustments, processed in canonical order (`effective_on`, `created_at`, `id`):
   `delta_k = tithe(A - R_1 - ... - R_k) - tithe(A - R_1 - ... - R_(k-1))` (always <= 0).
   The deltas telescope, so the entry's net tithe is always `tithe(A - total_refunds)` and a full refund
@@ -140,6 +142,15 @@ Let `accrued` = the sum of all obligation events and `paid` = the sum of all act
   deterministically, to buckets with positive position, **oldest first**. Each bucket gets `credit_applied_b`, and
   `outstanding_b = max(0, position_b − credit_applied_b)`.
 * Invariants (tested): `Σ outstanding_b = still to give` and `remaining credit pool = credit`.
+
+**Why allocations are stored but credit application is derived.** A payment's explicit allocations are what you
+confirmed when you recorded it ("this money was for 2026"). They are stored with the payment and never change, so an
+old period keeps showing exactly the payments you assigned to it. Credit is different: it is whatever is left over
+(unallocated remainders, or buckets that became over-covered because a later refund shrank them). Its application is
+recomputed on every read, deterministically and oldest bucket first, instead of being stored. A stored application
+would go stale whenever a refund, deletion, restore or reversal changes the buckets, and would then need its own
+corrections and audit trail. Derived on read, it is always consistent with the current records, and the same records
+always produce the same result.
 
 ### 3.8 Payout schedule
 * Setting `next_payout_date` defaults to **2026-12-31**. Day counts use local calendar dates in the configured time zone.
@@ -191,8 +202,9 @@ Worked example (CAD): income 1,750.00 + 249.99 gives accrued 200.00. Give 50.00 
 * "Today" = `todayInZone(clock.now(), settings.time_zone)` (default `America/Toronto`). The same zone drives year
   boundaries, the date input default and countdowns.
 * `server/clock.ts` exposes `now()`. Tests inject a clock. E2E can set `TENTH_TEST_NOW` (ISO), which is honored only when
-  `TENTH_TEST_MODE=1` and never when `NODE_ENV=production` unless `TENTH_TEST_MODE=1` is set explicitly. Production
-  deployments must not set it.
+  `TENTH_TEST_MODE=1`. With `NODE_ENV=production`, test mode is a fatal startup error unless
+  `TENTH_ALLOW_TEST_MODE_IN_PRODUCTION=1` is also set; only the E2E server (a production build) sets it. Real
+  deployments set neither.
 
 ---
 
@@ -211,14 +223,14 @@ export is computed from one consistent snapshot (totals always match the records
 | Better Auth: `user`, `session`, `account`, `verification`, `two_factor`, `rate_limit` | Managed by Better Auth. Sign-up disabled. |
 | `app_settings` | PK `owner_id`; `tracking_start date`, `time_zone text`, `display_currency`, `last_entry_currency`, `church_name`, `next_payout_date date`, `next_payout_is_default bool`, timestamps, `version int` |
 | `income_entry` | `id uuid`, `owner_id`, `currency` CHECK in (CAD,USD), `amount_minor bigint` CHECK 1..MAX, `received_on date`, `source`, `category`, `note`, `tithe_rate_bps int`, `rounding_policy text`, `tithe_minor bigint` CHECK = formula, `created_at`, `updated_at`, `deleted_at`, `deleted_reason`, `version`. UNIQUE (`id`,`owner_id`). Index (`owner_id`,`currency`,`received_on`) WHERE `deleted_at` IS NULL |
-| `income_adjustment` | `id`, `owner_id`, `income_id` + composite FK (`income_id`,`owner_id`) → income_entry, `kind` (refund\|correction), `amount_minor` > 0, `effective_on`, `reason` (required), `created_at`, `deleted_at`, `deleted_reason` |
+| `income_adjustment` | `id`, `owner_id`, `income_id` + composite FK (`income_id`,`owner_id`) → income_entry, `kind` (refund\|correction), `amount_minor` > 0, `effective_on`, `reason` (required), `created_at`, `deleted_at`, `deleted_reason`. Deferred constraint trigger: Σ active adjustments ≤ income amount (also fires when the income amount changes) |
 | `opening_obligation` | `id`, `owner_id`, `currency`, `amount_minor` > 0, `effective_on`, `label`, `note`, timestamps, `deleted_at`, `deleted_reason`, `version` |
 | `church_payment` | `id`, `owner_id`, `currency`, `amount_minor` > 0, `paid_on`, `church_name`, `reference`, `note`, timestamps, `reversed_at`, `reversal_reason`, `version`. UNIQUE (`id`,`owner_id`,`currency`) |
 | `payment_allocation` | `id`, `owner_id`, `payment_id`, `currency`, composite FK (`payment_id`,`owner_id`,`currency`) → church_payment, `bucket_year int`, `amount_minor` > 0, UNIQUE (`payment_id`,`bucket_year`). Deferred constraint trigger: Σ allocations ≤ payment amount |
 | `set_aside_entry` | `id`, `owner_id`, `currency`, `kind` (reserve\|release), `amount_minor` > 0, `effective_on`, `note`, `payment_id` nullable composite FK → church_payment, `created_at`, `deleted_at`, `deleted_reason` |
 | `audit_event` | `id`, `owner_id`, `entity_type`, `entity_id`, `action` (create\|update\|delete\|restore\|reverse), `before jsonb`, `after jsonb`, `reason`, `created_at`. Index (`owner_id`,`created_at` desc) |
-| `idempotency_record` | PK (`owner_id`,`key uuid`), `operation`, `request_hash`, `response jsonb`, `created_at` |
-| `app_rate_limit` | PK `key text`, `window_start timestamptz`, `count int` (not owner data; no RLS) |
+| `idempotency_record` | PK (`owner_id`,`key uuid`), `operation`, `request_hash`, `response jsonb` (`{ "v": 1, "value": <result> }`, so a `null` result replays as `null`; older rows hold the bare result), `created_at`. Rows older than 30 days are deleted at server start |
+| `app_rate_limit` | PK `key text`, `window_start timestamptz`, `count int` (not owner data; no RLS). Windows older than 1 day (and Better Auth `rate_limit` rows idle for 1 day) are deleted at server start by `scripts/migrate.mjs` |
 
 Soft-deleted rows (`deleted_at` / `reversed_at` not null) are excluded from every active total, but they stay in the
 database and in the audit history.
@@ -255,12 +267,18 @@ Server Actions return `ActionResult<T>`:
 * Optional TOTP two-factor authentication with backup codes (Better Auth `twoFactor` plugin), managed in Settings.
 * Cookies: HttpOnly, `Secure` in production (HTTPS), `SameSite=Lax`. Better Auth enforces trusted origins on its
   endpoints, and Next.js Server Actions reject cross-origin POSTs (Origin vs Host). Export routes are GET-only and
-  side-effect free.
+  side-effect free, and they answer 403 when the browser reports another site started the request
+  (`Sec-Fetch-Site: cross-site` or `same-site`; `same-origin`, `none` and a missing header are allowed). The check runs
+  before authentication and rate limiting.
+* In production the public origin (`BETTER_AUTH_URL` or `RENDER_EXTERNAL_URL`) must be `https://`; plain `http` is a
+  startup error except on loopback (`localhost`, `127.0.0.1`, `[::1]`).
 * Rate limits: Better Auth's database-backed limiter on auth endpoints, plus `app_rate_limit` for mutations (per
   owner) and exports.
 * Headers: per-request nonce CSP from `src/proxy.ts`, `frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`,
   `Referrer-Policy: no-referrer`, `Permissions-Policy`, HSTS in production, no `X-Powered-By`.
   Financial responses send `Cache-Control: private, no-store`.
+* JSON backups (`tenth-backup` version 1) contain every record including deleted and reversed ones, the settings,
+  per-currency totals and the full audit trail, including each event's `before` / `after` snapshots.
 * There are no analytics, no session replay and no third-party scripts. Fonts are self-hosted. Logs carry operation names,
   ids, durations and error codes, but never amounts, notes, sources or emails.
 * User text is rendered as escaped React text only (no `dangerouslySetInnerHTML`). CSV exports neutralize formula

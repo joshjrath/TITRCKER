@@ -19,6 +19,17 @@ interface DbState {
   db: Database;
 }
 
+/** Connection pool settings. A single-owner app needs few connections; timeouts keep a stuck query from piling up. */
+const POOL_MAX_CONNECTIONS = 10;
+/** A query running longer than this is cancelled by the server (surfaces as a "busy, try again" conflict). */
+const STATEMENT_TIMEOUT_MS = 15_000;
+/** A transaction left idle this long (e.g. a crashed request) is terminated so it releases its locks. */
+const IDLE_IN_TRANSACTION_TIMEOUT_MS = 30_000;
+/** Give up acquiring a new connection after this long. */
+const CONNECTION_TIMEOUT_MS = 10_000;
+/** Close pooled connections that have been idle this long. */
+const IDLE_CONNECTION_TIMEOUT_MS = 30_000;
+
 const globalForDb = globalThis as typeof globalThis & { __tenthDb?: DbState };
 
 let state: DbState | undefined = globalForDb.__tenthDb;
@@ -30,12 +41,12 @@ function createState(): DbState {
   }
   const pool = new Pool({
     connectionString,
-    max: 10,
+    max: POOL_MAX_CONNECTIONS,
     application_name: "tenth",
-    statement_timeout: 15_000,
-    idle_in_transaction_session_timeout: 30_000,
-    connectionTimeoutMillis: 10_000,
-    idleTimeoutMillis: 30_000,
+    statement_timeout: STATEMENT_TIMEOUT_MS,
+    idle_in_transaction_session_timeout: IDLE_IN_TRANSACTION_TIMEOUT_MS,
+    connectionTimeoutMillis: CONNECTION_TIMEOUT_MS,
+    idleTimeoutMillis: IDLE_CONNECTION_TIMEOUT_MS,
   });
   // An idle client erroring (e.g. the server restarted) must not crash the process.
   pool.on("error", (err: Error & { code?: string }) => {
@@ -61,21 +72,6 @@ export function getPool(): Pool {
 export function getDb(): Database {
   return getState().db;
 }
-
-/**
- * Lazy proxy over the Drizzle instance: importing `db` never connects; the pool is created on first use.
- * Prefer `getDb()` where a concrete instance is needed (e.g. passing to libraries that inspect it).
- */
-export const db: Database = new Proxy({} as Database, {
-  get(_target, prop) {
-    const real = getDb();
-    const value: unknown = Reflect.get(real, prop, real);
-    return typeof value === "function" ? (value as (...args: unknown[]) => unknown).bind(real) : value;
-  },
-  has(_target, prop) {
-    return Reflect.has(getDb(), prop);
-  },
-});
 
 /** Closes the pool (scripts and tests). Safe to call when nothing was opened. */
 export async function closeDb(): Promise<void> {

@@ -84,13 +84,31 @@
 }
 
 .hero {
-  font-size: clamp(56px, 4.4vw + 36px, 104px);
+  --hero-size: clamp(56px, 4.4vw + 36px, 104px);
+  font-size: var(--hero-size);
   font-weight: 300;
   line-height: 0.95;
   letter-spacing: -0.03em;
 }
 .hero .digits {
   gap: 0.16em;
+}
+/*
+ * Long figures shrink to fit (100cqi = the container's width, or the viewport without one). The divisor is the
+ * figure's approximate width in em (tabular digits ~0.6em, commas ~0.3em, cents ~0.8em); 5rem leaves room for the
+ * currency code and an "≈" before the figure. Never larger than the normal hero size.
+ */
+.hero.fit7 {
+  font-size: min(var(--hero-size), calc((100cqi - 5rem) / 5));
+}
+.hero.fit9 {
+  font-size: min(var(--hero-size), calc((100cqi - 5rem) / 6));
+}
+.hero.fit10 {
+  font-size: min(var(--hero-size), calc((100cqi - 5rem) / 7.2));
+}
+.hero.fit12 {
+  font-size: min(var(--hero-size), calc((100cqi - 5rem) / 9));
 }
 .hero .fraction {
   font-size: 0.42em;

@@ -48,6 +48,17 @@ test("reduced motion renders the final balance immediately", async ({ page }) =>
   await page.screenshot({ path: `e2e/screenshots/${test.info().project.name}-overview-reduced-motion.png` });
 });
 
+test("the balance stays put when the quick entry opens its details", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "visual-1440", "the quick entry shares the hero's row on desktop only");
+  await page.goto("/");
+  const amount = page.getByTestId("still-to-give-amount");
+  const before = await amount.boundingBox();
+  await page.getByRole("button", { name: /add details/i }).click();
+  await expect(page.getByLabel(/payer or source/i)).toBeVisible();
+  const after = await amount.boundingBox();
+  expect(after?.y).toBe(before?.y);
+});
+
 test.describe("signed out", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 

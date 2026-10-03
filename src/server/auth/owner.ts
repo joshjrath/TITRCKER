@@ -4,6 +4,7 @@ import { isAPIError } from "better-auth/api";
 
 import { getPool } from "@/server/db/client";
 import { logEvent } from "@/server/log";
+import { VALIDATION_MESSAGE } from "@/server/services/errors";
 
 import { getAuth, OWNER_ONLY_ERROR } from "./auth";
 import { getOwnerEmail } from "./config";
@@ -55,7 +56,7 @@ export async function createOwnerAccount(input: OwnerAccountInput): Promise<Crea
     return {
       ok: false,
       code: "invalid_input",
-      message: "Check the highlighted fields.",
+      message: VALIDATION_MESSAGE,
       fieldErrors: fieldErrorsFrom(parsed.error),
     };
   }

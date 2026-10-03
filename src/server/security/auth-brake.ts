@@ -13,13 +13,15 @@
  * Pure module (type-only import of the limiter) so the path matching is unit-testable; the route handler applies it.
  */
 
+import { GLOBAL_CREDENTIAL_LIMIT, GLOBAL_SECOND_FACTOR_LIMIT } from "@/server/auth/policy";
+
 import type { RateLimitRule } from "./rate-limit";
 
 /** Better Auth is mounted here (src/app/api/auth/[...all]). */
 export const AUTH_BASE_PATH = "/api/auth";
 
-const CREDENTIAL_RULE: RateLimitRule = { max: 30, windowSeconds: 15 * 60 };
-const SECOND_FACTOR_RULE: RateLimitRule = { max: 30, windowSeconds: 15 * 60 };
+const CREDENTIAL_RULE: RateLimitRule = GLOBAL_CREDENTIAL_LIMIT;
+const SECOND_FACTOR_RULE: RateLimitRule = GLOBAL_SECOND_FACTOR_LIMIT;
 
 /** Endpoint (relative to AUTH_BASE_PATH, lower-case) -> global limit. */
 export const GLOBAL_AUTH_LIMITS: Readonly<Record<string, RateLimitRule>> = {

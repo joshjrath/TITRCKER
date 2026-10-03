@@ -2,6 +2,7 @@ import "server-only";
 
 import { getOwner, type OwnerContext } from "@/server/auth/session";
 import { logEvent } from "@/server/log";
+import { isUserInitiatedRequest } from "@/server/security/fetch-metadata";
 import { checkRateLimit, RATE_LIMITS } from "@/server/security/rate-limit";
 
 /** Headers for every export response (financial data: never cached, never sniffed). */
@@ -23,10 +24,13 @@ export function attachment(filename: string): string {
 }
 
 /**
- * Authenticates the session owner and applies the export rate limit (`export:<ownerId>`).
- * Returns the owner, or the 401/429 response to send.
+ * Refuses downloads another site started (Sec-Fetch-Site cross-site/same-site), then authenticates the session owner
+ * and applies the export rate limit (`export:<ownerId>`). Returns the owner, or the 403/401/429 response to send.
  */
-export async function authorizeExport(): Promise<{ owner: OwnerContext } | { response: Response }> {
+export async function authorizeExport(request: Request): Promise<{ owner: OwnerContext } | { response: Response }> {
+  if (!isUserInitiatedRequest(request.headers)) {
+    return { response: jsonError(403, "forbidden", "Start the export from Tenth itself.") };
+  }
   const owner = await getOwner();
   if (!owner) return { response: jsonError(401, "unauthorized", "Sign in to export your data.") };
   const limit = await checkRateLimit(`export:${owner.ownerId}`, RATE_LIMITS.export);

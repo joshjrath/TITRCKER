@@ -40,7 +40,9 @@ export function GivenSummary({ currency, headline, payout, other, combined }: Gi
       <h2 id="given-balance-title" className="text-label text-text-2">
         Still to give · {currency}
       </h2>
-      <AnimatedAmount minor={headline.stillToGiveMinor} currency={currency} size="hero" className="mt-3 block" />
+      <p className="@container mt-3">
+        <AnimatedAmount minor={headline.stillToGiveMinor} currency={currency} size="hero" />
+      </p>
       {combined ? <CombinedTotalLine combined={combined} className="mt-2" /> : null}
       {headline.creditMinor > 0 ? (
         <p className="mt-2 text-label text-positive">

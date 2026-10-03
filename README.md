@@ -146,17 +146,27 @@ database in the same region.
 6. Optional: run `npm run db:doctor` in the Shell. It confirms that RLS applies to the database role Render created.
 
 Notes:
-- **Custom domain:** add it in Render, then set `BETTER_AUTH_URL=https://your.domain`. If you keep using the
-  onrender.com address too, add it to `BETTER_AUTH_TRUSTED_ORIGINS`. Without a custom domain, `BETTER_AUTH_URL`
-  defaults to Render's `RENDER_EXTERNAL_URL`.
+- **Custom domain:** add it in Render, then set `BETTER_AUTH_URL=https://your.domain`. The onrender.com address
+  (`RENDER_EXTERNAL_URL`) stays trusted automatically, so signing in there keeps working. Any other extra origin goes
+  in `BETTER_AUTH_TRUSTED_ORIGINS` (comma-separated). Without a custom domain, `BETTER_AUTH_URL` defaults to
+  `RENDER_EXTERNAL_URL`.
 - **Plans:** the Blueprint uses paid plans (`starter` web service, `basic-256mb` database), because Render's free
   Postgres databases expire and have no backups. Check current plan features and prices in Render's docs before
   deploying; this repo could not reach render.com while it was being built.
-- **Database connection:** `DATABASE_URL` is the database's *internal* connection string, which stays on Render's
-  private network. If you connect from outside Render, use the external URL with TLS (`?sslmode=require`).
+- **Database connection:** `DATABASE_URL` is the database's *internal* connection string. The app and the database
+  talk over Render's private network, and that connection is **not encrypted with TLS** unless you append
+  `?sslmode=require` to `DATABASE_URL`. `npm run db:doctor` prints whether the current connection uses TLS. If you
+  connect from outside Render, always use the external URL with `?sslmode=require`.
 - **Required runtime variables:** `DATABASE_URL`, `BETTER_AUTH_SECRET` (32+ characters) and `OWNER_EMAIL`. Also
-  `BETTER_AUTH_URL`, unless `RENDER_EXTERNAL_URL` is available. The server refuses to start if any of these is missing.
-- **Never set `TENTH_TEST_MODE`** in a real deployment. It enables the test clock.
+  `BETTER_AUTH_URL`, unless `RENDER_EXTERNAL_URL` is available; in production it must be `https://` (plain `http` is
+  accepted only for localhost). If one of these is missing or invalid, the server logs which variable is wrong (never
+  its value) and answers **every request with 500, including `/api/health`**. Render's health check therefore fails
+  and the deploy does not go live; the previous deploy keeps serving. Fix the variable and redeploy.
+- **Never set `TENTH_TEST_MODE`** in a real deployment. It enables the test clock. In production it is a startup
+  error (same effect as above) unless `TENTH_ALLOW_TEST_MODE_IN_PRODUCTION=1` is also set, which only the E2E test
+  server does.
+- **Housekeeping:** every start (`npm run start:render`) also deletes rate-limit rows older than a day and idempotency
+  records older than 30 days, and logs only the counts.
 
 ---
 
@@ -179,7 +189,8 @@ Notes:
 - **Integrity.**
   - CHECK constraints enforce currencies, amount limits and the tithe formula on every row.
   - Composite foreign keys keep linked records on the same owner.
-  - A deferred trigger keeps payment allocations within the payment amount.
+  - Deferred triggers keep payment allocations within the payment amount, and an entry's active refunds within its
+    received amount.
   - Balance changes run in one transaction under a per-owner lock, with idempotency keys and optimistic versioning.
     Double clicks and retries never double-save.
 - **Sessions.**
@@ -209,8 +220,9 @@ Notes:
   - Amounts and notes never appear in URLs.
   - The server makes one kind of outbound request: fetching the public USD→CAD rate, and only when you owe something in
     USD. It sends no personal or financial data.
-- **Exports.** Downloads require you to be signed in and are never stored or emailed. CSV text fields are protected
-  against spreadsheet formula injection.
+- **Exports.** Downloads require you to be signed in and are never stored or emailed. They must be started from Tenth
+  itself or the address bar: a request another site triggers (`Sec-Fetch-Site: cross-site` or `same-site`) is refused
+  with 403. CSV text fields are protected against spreadsheet formula injection.
 - **Encryption.**
   - In transit: Render serves the app over HTTPS.
   - At rest: provided by Render's managed PostgreSQL, per Render's documentation; confirm it for your plan.
@@ -220,12 +232,23 @@ Notes:
 
 - **Database:** paid Render Postgres plans include automated backups / point-in-time recovery; check your plan's
   retention in Render's docs. To restore, use Render's dashboard recovery flow, which creates a new database, then
-  point `DATABASE_URL` at it. You can also take your own copy with `pg_dump` using the external connection string and
-  restore it with `pg_restore`.
+  point `DATABASE_URL` at it.
+- **Your own `pg_dump` copy.** The Blueprint sets `ipAllowList: []`, so the database accepts **no connections from
+  outside Render**. Two ways to take a dump:
+  1. **From the Render Shell (recommended).** Open the web service's **Shell** and run
+     `pg_dump "$DATABASE_URL" --format=custom --file=/tmp/tenth.dump` (this uses the internal URL). Then copy the
+     file to your computer, e.g. with `scp` over Render's SSH access (see Render's docs for your plan); the instance's
+     disk is temporary. If the Shell has no `pg_dump` or no way to copy files off, use option 2.
+  2. **From your computer, temporarily.** In the database's **Networking** settings, add your current IP address to
+     the allow list. Copy the **external** connection string and run
+     `pg_dump "<external-url>?sslmode=require" --format=custom --file=tenth.dump`. **Remove your IP from the allow list
+     afterwards.**
+
+  Restore a dump into an empty database with `pg_restore --no-owner --dbname "<url>" tenth.dump`.
 - **From the app:** Ledger and Settings offer a **CSV export** and a versioned **JSON backup** (`tenth-backup`
   version 1). Both are downloaded only when you click them.
-  - The JSON includes every record (deleted and reversed ones too), the allocations, the settings, the audit history
-    and per-currency totals, so you can reconcile it.
+  - The JSON includes every record (deleted and reversed ones too), the allocations, the settings, the full audit
+    history (each change with its before and after state) and per-currency totals, so you can reconcile it.
   - The CSV ends with summary rows that reconcile with the totals.
   - Tenth can't import a backup back in yet. Use the database restore to recover.
 

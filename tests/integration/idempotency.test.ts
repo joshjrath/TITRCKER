@@ -1,10 +1,10 @@
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 
 import { closeDb } from "@/server/db/client";
 import { auditEvent, idempotencyRecord, incomeAdjustment, incomeEntry } from "@/server/db/schema";
 import { withOwner } from "@/server/db/with-owner";
-import { canonicalJson } from "@/server/services/idempotency";
+import { canonicalJson, requestHash, withIdempotency } from "@/server/services/idempotency";
 import { createAdjustment, createIncome, deleteIncome } from "@/server/services/income";
 
 import { createTestUser, resetAppData } from "./helpers/db";
@@ -56,7 +56,7 @@ describe("idempotency", () => {
     );
     expect(records).toHaveLength(1);
     expect(records[0]).toMatchObject({ operation: "income.create" });
-    expect(records[0]!.response).toEqual(results[0]);
+    expect(records[0]!.response).toEqual({ v: 1, value: results[0] });
   });
 
   it("concurrent refunds with distinct keys respect the refund limit (serialized by the settings lock)", async () => {
@@ -106,5 +106,35 @@ describe("idempotency", () => {
     await createIncome(ctxFor(owner), { idempotencyKey: k, amount: "10.00", currency: "CAD", receivedOn: "2026-10-05" });
     const theirs = await createIncome(ctxFor(other), { idempotencyKey: k, amount: "99.00", currency: "USD", receivedOn: "2026-10-05" });
     expect(theirs).toMatchObject({ amountMinor: 9900, currency: "USD" });
+  });
+
+  it.each([
+    ["null", null],
+    ["undefined", undefined],
+    ["0", 0],
+    ["false", false],
+    ["an object with a value member", { value: "kept", v: 2 }],
+  ])("replays a stored %s result instead of reporting 'still processing'", async (_label, result) => {
+    const req = { key: key(), operation: "test.op", request: { a: 1 } };
+    const fn = vi.fn(async () => result);
+    expect(await withOwner(owner, (tx) => withIdempotency(tx, owner, req, fn))).toEqual(result);
+    expect(await withOwner(owner, (tx) => withIdempotency(tx, owner, req, fn))).toEqual(result);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it("replays rows stored before responses were wrapped (bare result)", async () => {
+    const req = { key: key(), operation: "test.legacy", request: { a: 1 } };
+    await withOwner(owner, (tx) =>
+      tx.insert(idempotencyRecord).values({
+        ownerId: owner,
+        key: req.key,
+        operation: req.operation,
+        requestHash: requestHash(req.operation, req.request),
+        response: { id: "legacy-id", amountMinor: 100 },
+      }),
+    );
+    const fn = vi.fn(async () => ({ id: "new" }));
+    expect(await withOwner(owner, (tx) => withIdempotency(tx, owner, req, fn))).toEqual({ id: "legacy-id", amountMinor: 100 });
+    expect(fn).not.toHaveBeenCalled();
   });
 });

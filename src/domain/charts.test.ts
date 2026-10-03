@@ -106,22 +106,51 @@ describe('cumulativeSeries', () => {
 });
 
 describe('monthlyBreakdown', () => {
-  it('lists every month in the period, including zero months', () => {
+  it('lists every month in the period, with the opening dated before the range and later payments as their own rows', () => {
     const snap = ledger();
     const rows = monthlyBreakdown(snap, deriveObligationEvents(snap), 'CAD', periodRangeForYear(2026, trackingStart));
     expect(rows).toEqual([
-      { monthKey: '2026-10', netIncomeMinor: m('1,500.00'), titheMinor: m('150.00'), paidMinor: m('30.00') },
-      { monthKey: '2026-11', netIncomeMinor: m('100.00'), titheMinor: m('10.00'), paidMinor: 0 },
-      { monthKey: '2026-12', netIncomeMinor: 0, titheMinor: 0, paidMinor: 0 },
+      { kind: 'before', monthKey: '2026-10', date: '2026-10-03', netIncomeMinor: 0, titheMinor: m('50.00'), paidMinor: 0 },
+      { kind: 'month', monthKey: '2026-10', netIncomeMinor: m('1,500.00'), titheMinor: m('150.00'), paidMinor: m('30.00') },
+      { kind: 'month', monthKey: '2026-11', netIncomeMinor: m('100.00'), titheMinor: m('10.00'), paidMinor: 0 },
+      { kind: 'month', monthKey: '2026-12', netIncomeMinor: 0, titheMinor: 0, paidMinor: 0 },
+      // Paid on Jan 10, 2027: CAD 25.00 of that payment was allocated to 2026.
+      { kind: 'after', monthKey: '2026-12', date: '2026-12-31', netIncomeMinor: 0, titheMinor: 0, paidMinor: m('25.00') },
     ]);
   });
 
-  it('includes openings dated inside the range', () => {
+  it('adds up to the period figures (accrued, net income, given = allocations to the bucket)', () => {
+    const snap = ledger();
+    const rows = monthlyBreakdown(snap, deriveObligationEvents(snap), 'CAD', periodRangeForYear(2026, trackingStart));
+    const sum = (pick: (r: (typeof rows)[number]) => number): number => rows.reduce((s, r) => s + pick(r), 0);
+    expect(sum((r) => r.titheMinor)).toBe(m('210.00'));
+    expect(sum((r) => r.netIncomeMinor)).toBe(m('1,600.00'));
+    expect(sum((r) => r.paidMinor)).toBe(m('55.00'));
+  });
+
+  it('counts only the part of a payment allocated to the year, by payment date', () => {
+    const snap = ledger();
+    const rows = monthlyBreakdown(snap, deriveObligationEvents(snap), 'CAD', periodRangeForYear(2027, trackingStart));
+    expect(rows[0]).toEqual({ kind: 'month', monthKey: '2027-01', netIncomeMinor: m('100.00'), titheMinor: m('10.00'), paidMinor: m('10.00') });
+    expect(rows.some((r) => r.kind !== 'month')).toBe(false);
+  });
+
+  it('includes openings dated inside the range and has no carry-in row then', () => {
     const snap = ledger();
     const range = periodRangeForYear(2026, d('2026-01-01'));
     const rows = monthlyBreakdown(snap, deriveObligationEvents(snap), 'CAD', range);
-    expect(rows).toHaveLength(12);
-    expect(rows.find((r) => r.monthKey === '2026-05')?.titheMinor).toBe(m('50.00'));
-    expect(rows.find((r) => r.monthKey === '2026-01')?.titheMinor).toBe(0);
+    const months = rows.filter((r) => r.kind === 'month');
+    expect(months).toHaveLength(12);
+    expect(rows[0]?.kind).toBe('month');
+    expect(months.find((r) => r.monthKey === '2026-05')?.titheMinor).toBe(m('50.00'));
+    expect(months.find((r) => r.monthKey === '2026-01')?.titheMinor).toBe(0);
+  });
+
+  it('all time: whole payments by payment date and no before/after rows', () => {
+    const snap = ledger();
+    const rows = monthlyBreakdown(snap, deriveObligationEvents(snap), 'CAD', allTimeRange(trackingStart, d('2027-01-20'), snap));
+    expect(rows.every((r) => r.kind === 'month')).toBe(true);
+    expect(rows.reduce((s, r) => s + r.paidMinor, 0)).toBe(m('70.00'));
+    expect(rows.find((r) => r.kind === 'month' && r.monthKey === '2026-05')?.titheMinor).toBe(m('50.00'));
   });
 });

@@ -41,7 +41,7 @@ export function DataExport() {
       </ul>
       <p className="text-label text-text-3">
         Files download to this device only when you ask. Tenth never emails backups or sends your data anywhere. Every amount
-        carries its currency; CAD and USD are never added together.
+        carries its own currency; files never convert between CAD and USD.
       </p>
     </div>
   );

@@ -30,14 +30,14 @@ export function TitheRateInfo({ titheRateBps, currency }: TitheRateInfoProps) {
         </span>
         . Totals are sums of those rounded amounts, never {percent} of a total.
       </p>
-      <table className="w-full max-w-md text-[0.875rem]">
+      <table className="w-full max-w-sm text-[0.875rem]">
         <caption className="sr-only">Examples of the tithe on single entries</caption>
         <thead>
-          <tr className="text-left text-label text-text-3">
+          <tr className="text-right text-label text-text-3">
             <th scope="col" className="pb-2 font-normal">
               Received
             </th>
-            <th scope="col" className="pb-2 text-right font-normal">
+            <th scope="col" className="pb-2 font-normal">
               Tithe
             </th>
           </tr>
@@ -45,7 +45,7 @@ export function TitheRateInfo({ titheRateBps, currency }: TitheRateInfoProps) {
         <tbody className="tabular divide-y divide-line border-y border-line">
           {EXAMPLES.map((amount) => (
             <tr key={amount}>
-              <td className="py-2 text-text-2">{formatMoney(amount, currency)}</td>
+              <td className="py-2 text-right text-text-2">{formatMoney(amount, currency)}</td>
               <td className="py-2 text-right text-text">{formatMoney(tithe(amount), currency)}</td>
             </tr>
           ))}

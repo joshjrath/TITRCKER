@@ -8,7 +8,7 @@ import { headers } from "next/headers";
 import { renderSVG } from "uqr";
 
 import type { ActionResult } from "@/lib/action-result";
-import { rateLimitedResult, unauthorizedResult, validationResult } from "@/server/auth/action-results";
+import { rateLimitedResult, unauthorizedResult, validationResult } from "./failures";
 import { getAuth } from "@/server/auth/auth";
 import {
   fieldErrorsFrom,

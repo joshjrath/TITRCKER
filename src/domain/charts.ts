@@ -4,10 +4,11 @@
  * Cumulative accrued tithe is a step series of obligation events in the bucket shown (or all buckets
  * for all time). Opening obligations dated before the period start in the same bucket form the
  * starting value. The given line is the cumulative allocation to the bucket by payment date (or all
- * payments for all time). The monthly breakdown lists every month in the range, including zero months.
+ * payments for all time). The monthly breakdown lists every month in the range, including zero months, plus
+ * "before" / "after" rows for period amounts dated outside the range, so its totals match the period figures.
  */
 import type { Currency } from './constants';
-import { maxLocalDate, minLocalDate, monthKeyOf, monthsInRange, type LocalDate, type MonthKey } from './dates';
+import { maxLocalDate, minLocalDate, monthKeyOf, monthsInRange, yearOf, type LocalDate, type MonthKey } from './dates';
 import { addMinor, maxMinor, negMinor, sumMinor, ZERO, type Minor } from './money';
 import type { ObligationEvent } from './obligations';
 import type { PeriodKey, PeriodRange } from './periods';
@@ -133,50 +134,97 @@ export function cumulativeSeries(
   };
 }
 
-export interface MonthRow {
-  monthKey: MonthKey;
-  /** Income received minus refunds effective in the month. */
+/** The three money columns of a monthly breakdown row. */
+export interface MonthRowValues {
+  /** Income received minus refunds effective on the row's dates. */
   netIncomeMinor: Minor;
-  /** Σ obligation events dated in the month: income tithe + refund deltas + openings. */
+  /** Σ obligation events dated on the row's dates: income tithe + refund deltas + openings. */
   titheMinor: Minor;
-  /** Σ payments dated in the month (whole payment amounts). */
+  /**
+   * Given on the row's dates, by payment date: for a year, the allocations to that year's bucket (the same
+   * measure as the period's "Given"); for all time, whole payment amounts.
+   */
   paidMinor: Minor;
 }
 
-/** One row per month in the range (zero months included), for one currency. */
+/**
+ * One row of the monthly breakdown:
+ * - `month`: a calendar month inside the range (zero months included).
+ * - `before`: amounts that belong to the period but are dated before the range start, e.g. an opening balance
+ *   dated before the tracking start, or a payment allocated to this year made earlier. `date` is the range start.
+ * - `after`: allocations to this period from payments made after the range end (e.g. paid next January).
+ *   `date` is the range end.
+ *
+ * Every row has a `monthKey` (for `before` / `after` rows, the month of `date`), so tell rows apart by `kind`.
+ * `before` and `after` rows appear only when they hold something, so the rows always add up to the period's
+ * figures: Σ tithe = accrued, Σ income = net income, Σ given = given.
+ */
+export type MonthRow = MonthRowValues & { monthKey: MonthKey } & (
+    | { kind: 'month' }
+    | { kind: 'before' | 'after'; date: LocalDate }
+  );
+
+const emptyValues = (): MonthRowValues => ({ netIncomeMinor: ZERO, titheMinor: ZERO, paidMinor: ZERO });
+
+const hasValues = (v: MonthRowValues): boolean => v.netIncomeMinor !== 0 || v.titheMinor !== 0 || v.paidMinor !== 0;
+
+/**
+ * Monthly rows for one currency and period. For a year, everything that belongs to that year's bucket counts
+ * (incomes received and refunds effective that year, the bucket's obligation events and the allocations to it);
+ * amounts dated outside the range go to a `before` / `after` row. For `'all'`, every record of the currency counts
+ * and given is whole payments by payment date.
+ */
 export function monthlyBreakdown(
   snapshot: LedgerSnapshot,
   events: readonly ObligationEvent[],
   currency: Currency,
   range: PeriodRange,
 ): MonthRow[] {
-  const rows = new Map<MonthKey, MonthRow>(
-    monthsInRange(range.start, range.end).map((monthKey) => [
-      monthKey,
-      { monthKey, netIncomeMinor: ZERO, titheMinor: ZERO, paidMinor: ZERO },
-    ]),
-  );
-  const inRange = (d: LocalDate): boolean => d >= range.start && d <= range.end;
-  const rowFor = (d: LocalDate): MonthRow | undefined => (inRange(d) ? rows.get(monthKeyOf(d)) : undefined);
+  const key = range.key;
+  const inPeriod = (year: number): boolean => key === 'all' || year === key;
+  const months = new Map<MonthKey, MonthRowValues>(monthsInRange(range.start, range.end).map((k) => [k, emptyValues()]));
+  const before = emptyValues();
+  const after = emptyValues();
+  const valuesFor = (d: LocalDate): MonthRowValues => {
+    if (d < range.start) return before;
+    if (d > range.end) return after;
+    const values = months.get(monthKeyOf(d));
+    if (!values) throw new RangeError(`No month row for ${d}`);
+    return values;
+  };
 
   const incomeCurrency = new Map(snapshot.incomes.map((i) => [i.id, i.currency] as const));
   for (const income of snapshot.incomes) {
-    const row = income.currency === currency ? rowFor(income.receivedOn) : undefined;
-    if (row) row.netIncomeMinor = addMinor(row.netIncomeMinor, income.amountMinor);
+    if (income.currency !== currency || !inPeriod(yearOf(income.receivedOn))) continue;
+    const values = valuesFor(income.receivedOn);
+    values.netIncomeMinor = addMinor(values.netIncomeMinor, income.amountMinor);
   }
   for (const adjustments of adjustmentsByIncome(snapshot).values()) {
     for (const adjustment of adjustments) {
-      const row = incomeCurrency.get(adjustment.incomeId) === currency ? rowFor(adjustment.effectiveOn) : undefined;
-      if (row) row.netIncomeMinor = addMinor(row.netIncomeMinor, negMinor(adjustment.amountMinor));
+      if (incomeCurrency.get(adjustment.incomeId) !== currency || !inPeriod(yearOf(adjustment.effectiveOn))) continue;
+      const values = valuesFor(adjustment.effectiveOn);
+      values.netIncomeMinor = addMinor(values.netIncomeMinor, negMinor(adjustment.amountMinor));
     }
   }
   for (const event of events) {
-    const row = event.currency === currency ? rowFor(event.date) : undefined;
-    if (row) row.titheMinor = addMinor(row.titheMinor, event.amountMinor);
+    if (event.currency !== currency || !inPeriod(event.bucketYear)) continue;
+    const values = valuesFor(event.date);
+    values.titheMinor = addMinor(values.titheMinor, event.amountMinor);
   }
   for (const payment of snapshot.payments) {
-    const row = payment.currency === currency ? rowFor(payment.paidOn) : undefined;
-    if (row) row.paidMinor = addMinor(row.paidMinor, payment.amountMinor);
+    if (payment.currency !== currency) continue;
+    const given =
+      key === 'all'
+        ? payment.amountMinor
+        : sumMinor(payment.allocations.filter((a) => a.bucketYear === key).map((a) => a.amountMinor));
+    if (given === 0) continue;
+    const values = valuesFor(payment.paidOn);
+    values.paidMinor = addMinor(values.paidMinor, given);
   }
-  return [...rows.values()];
+
+  return [
+    ...(hasValues(before) ? [{ kind: 'before' as const, monthKey: monthKeyOf(range.start), date: range.start, ...before }] : []),
+    ...[...months].map(([monthKey, values]) => ({ kind: 'month' as const, monthKey, ...values })),
+    ...(hasValues(after) ? [{ kind: 'after' as const, monthKey: monthKeyOf(range.end), date: range.end, ...after }] : []),
+  ];
 }

@@ -2,8 +2,8 @@
  * Versioned JSON backup (format `tenth-backup`, version 1).
  *
  * The backup contains every record including soft-deleted / reversed ones (with their deletion
- * metadata), the policy in force, per-currency totals for reconciliation and the audit trail
- * (without before/after snapshots). Amounts are integer minor units in their original currency.
+ * metadata), the policy in force, per-currency totals for reconciliation and the full audit trail
+ * (including each event's before/after snapshots). Amounts are integer minor units in their original currency.
  */
 import { CURRENCIES, ROUNDING_POLICY, TITHE_RATE_BPS, type Currency, type RoundingPolicy } from './constants';
 import type { LocalDate } from './dates';
@@ -42,6 +42,9 @@ export interface BackupTotals {
   setAsideMinor: Minor;
 }
 
+/** Any JSON value (audit snapshots are stored as jsonb). */
+export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+
 export interface BackupAuditEvent {
   id: string;
   entityType: string;
@@ -49,6 +52,10 @@ export interface BackupAuditEvent {
   action: string;
   reason: string | null;
   createdAt: string;
+  /** The record as it was before the change (null for a create). */
+  before: JsonValue | null;
+  /** The record after the change (null when the action recorded no new state). */
+  after: JsonValue | null;
 }
 
 export interface BackupRecords {
@@ -114,7 +121,11 @@ export function buildBackup(input: {
     policy: { titheRateBps: TITHE_RATE_BPS, roundingPolicy: ROUNDING_POLICY, currencies: [...CURRENCIES] },
     records: copyRecords(input.records),
     totals,
-    auditEvents: input.auditEvents.map((event) => ({ ...event })),
+    auditEvents: input.auditEvents.map((event) => ({
+      ...event,
+      before: structuredClone(event.before),
+      after: structuredClone(event.after),
+    })),
   };
 }
 

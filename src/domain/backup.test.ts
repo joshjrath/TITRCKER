@@ -32,7 +32,18 @@ describe('backup', () => {
         setAsides: [],
       },
       balances: computeBalances(active, toLocalDate('2026-10-03')),
-      auditEvents: [{ id: 'ev-1', entityType: 'income_entry', entityId: inc.id, action: 'create', reason: null, createdAt: inc.createdAt }],
+      auditEvents: [
+        {
+          id: 'ev-1',
+          entityType: 'income_entry',
+          entityId: inc.id,
+          action: 'create',
+          reason: null,
+          createdAt: inc.createdAt,
+          before: null,
+          after: { amountMinor: inc.amountMinor, note: null },
+        },
+      ],
     });
     expect(backup.format).toBe(BACKUP_FORMAT);
     expect(backup.version).toBe(BACKUP_VERSION);
@@ -45,6 +56,7 @@ describe('backup', () => {
       setAsideMinor: 0,
     });
     expect(backup.records.incomes).toHaveLength(2);
+    expect(backup.auditEvents).toEqual([expect.objectContaining({ before: null, after: { amountMinor: inc.amountMinor, note: null } })]);
     expect(isBackupV1Header(JSON.parse(JSON.stringify(backup)))).toBe(true);
   });
 

@@ -2,7 +2,8 @@
 // Starts a production build of Tenth for Playwright against the (wiped) test database.
 // - Never touches the dev database: refuses to run if DATABASE_URL_TEST equals DATABASE_URL.
 // - Uses the standard .next build output: stop any `next dev` in this checkout first.
-// - Pins the clock with TENTH_TEST_MODE=1 + TENTH_TEST_NOW so dates in assertions are deterministic.
+// - Pins the clock with TENTH_TEST_MODE=1 + TENTH_TEST_NOW so dates in assertions are deterministic
+//   (TENTH_ALLOW_TEST_MODE_IN_PRODUCTION=1 lets the production build start in test mode).
 // Set E2E_SKIP_BUILD=1 to reuse an existing production build.
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -31,6 +32,8 @@ const env = {
   OWNER_EMAIL: "owner@e2e.test",
   OWNER_SETUP_TOKEN: "e2e-setup-token-0123456789",
   TENTH_TEST_MODE: "1",
+  // Test mode in a production build is a fatal startup error unless explicitly allowed (E2E only).
+  TENTH_ALLOW_TEST_MODE_IN_PRODUCTION: "1",
   TENTH_TEST_NOW: process.env.TENTH_TEST_NOW ?? "2026-10-03T16:00:00.000Z", // noon in Toronto
   // Pinned USD→CAD rate so the combined total is deterministic and no test touches the network.
   TENTH_FX_TEST_RATE: "1.3500",

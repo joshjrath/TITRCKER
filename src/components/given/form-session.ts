@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useUnsavedChanges } from "@/components/app/unsaved-changes";
 
 /**
  * One idempotency key per form instance (ARCHITECTURE §6). Call `renew` only after the server confirmed
@@ -15,16 +16,12 @@ export function useIdempotencyKey(): [key: string, renew: () => void] {
 export const DISCARD_MESSAGE = "Discard your changes? Nothing has been saved.";
 
 /**
- * Warns before leaving a dirty form: a beforeunload prompt for reloads / tab closes, plus a guard to pass as
- * a Dialog's `onRequestClose` (Esc, close button, backdrop). The guard also refuses to close while `busy`.
+ * Warns before leaving a dirty form: registers it with the app's leave guard (in-app links, sign out) and the
+ * beforeunload prompt (reloads, tab closes), and returns a guard to pass as a Dialog's `onRequestClose` (Esc, close
+ * button, backdrop). The guard also refuses to close while `busy`.
  */
 export function useUnsavedChangesGuard(dirty: boolean, busy = false, message = DISCARD_MESSAGE): () => boolean {
-  useEffect(() => {
-    if (!dirty) return;
-    const onBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [dirty]);
+  useUnsavedChanges(dirty);
 
   return useCallback(() => {
     if (busy) return false;

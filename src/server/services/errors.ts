@@ -99,20 +99,3 @@ export function toActionError(err: unknown, operation: string): Extract<ActionRe
   });
   return { ok: false, code: "server_error", message: "Something went wrong on our side. Nothing was saved." };
 }
-
-/**
- * Runs a service call and wraps the outcome in an ActionResult. Used by Server Actions after
- * authentication and rate limiting.
- */
-export async function runService<T>(
-  operation: string,
-  fn: () => Promise<T>,
-  successMessage: string | ((data: T) => string),
-): Promise<ActionResult<T>> {
-  try {
-    const data = await fn();
-    return { ok: true, data, message: typeof successMessage === "function" ? successMessage(data) : successMessage };
-  } catch (err) {
-    return toActionError(err, operation);
-  }
-}

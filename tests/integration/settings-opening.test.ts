@@ -56,11 +56,18 @@ describe("settings updates", () => {
     await expectServiceError(save({ timeZone: "+05:00" }), "validation", "timeZone");
   });
 
-  it("stores the canonical IANA name for the time zone", async () => {
+  it.each(["EST", "US/Eastern", "Etc/GMT+5", "-0500", "GMT", "Canada/Eastern"])(
+    "rejects the alias, abbreviation or fixed offset %j instead of mapping it to another zone",
+    async (timeZone) => {
+      await expectServiceError(save({ timeZone }), "validation", "timeZone");
+    },
+  );
+
+  it("stores the canonical spelling for the time zone (case-insensitive match)", async () => {
     const lower = await save({ timeZone: "america/toronto" });
     expect(lower.timeZone).toBe("America/Toronto");
-    const alias = await save({ timeZone: "US/Eastern", expectedVersion: lower.version });
-    expect(alias.timeZone).toBe("America/New_York");
+    const utc = await save({ timeZone: "utc", expectedVersion: lower.version });
+    expect(utc.timeZone).toBe("UTC");
   });
 
   it("tracking start must be <= today and <= the earliest active income", async () => {

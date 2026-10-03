@@ -5,7 +5,7 @@ import { getAuth, resetAuthForTests } from "@/server/auth/auth";
 import { closeDb, getDb } from "@/server/db/client";
 import { appRateLimit } from "@/server/db/schema";
 import { CLIENT_IP_HEADER } from "@/server/security/client-ip";
-import { checkRateLimit, pruneRateLimits, rateLimitStorageKey } from "@/server/security/rate-limit";
+import { checkRateLimit, rateLimitStorageKey } from "@/server/security/rate-limit";
 
 import { resetAppData } from "./helpers/db";
 
@@ -80,14 +80,6 @@ describe("checkRateLimit (app_rate_limit, fixed window)", () => {
     await expect(checkRateLimit("x".repeat(201), rule)).rejects.toThrow();
     await expect(checkRateLimit("test:x", { max: 0, windowSeconds: 60 })).rejects.toThrow();
     await expect(checkRateLimit("test:x", { max: 1, windowSeconds: 0 })).rejects.toThrow();
-  });
-
-  it("prunes old windows", async () => {
-    await checkRateLimit("test:old", rule);
-    await expireWindow("test:old", 2 * 24 * 60 * 60);
-    expect(await pruneRateLimits()).toBeGreaterThanOrEqual(1);
-    const rows = await getDb().select().from(appRateLimit).where(eq(appRateLimit.key, rateLimitStorageKey("test:old")));
-    expect(rows).toHaveLength(0);
   });
 });
 

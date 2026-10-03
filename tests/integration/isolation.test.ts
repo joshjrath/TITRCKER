@@ -205,6 +205,59 @@ describe("database constraints", () => {
     });
   });
 
+  describe("refund limit trigger (Σ active adjustments <= received amount)", () => {
+    const insertAdjustment = (c: PoolClient, amount: number) =>
+      c.query(
+        `INSERT INTO income_adjustment (owner_id, income_id, kind, amount_minor, effective_on, reason)
+         VALUES ($1, $2, 'refund', $3, '2026-10-07', 'raw') RETURNING id`,
+        [ownerA, incomeA, amount],
+      );
+
+    /** Runs `fn` as owner A in a transaction that must fail at COMMIT with the refund-limit check violation. */
+    async function expectCommitRejected(fn: (c: PoolClient) => Promise<unknown>): Promise<void> {
+      const client = await getPool().connect();
+      try {
+        await client.query("BEGIN");
+        await asOwner(client, ownerA);
+        await fn(client);
+        // Deferred: the statements succeed; the check fires at COMMIT.
+        await expect(client.query("COMMIT")).rejects.toMatchObject({ code: "23514", constraint: "income_adjustment_sum_check" });
+      } finally {
+        await client.query("ROLLBACK").catch(() => undefined);
+        client.release();
+      }
+    }
+
+    it("rejects a raw over-limit refund at commit (income 1,750.00 with 10.00 already refunded)", async () => {
+      await expectCommitRejected((c) => insertAdjustment(c, 174_001));
+    });
+
+    it("accepts refunds up to the received amount and ignores deleted adjustments", async () => {
+      await rawTx(async (c) => {
+        await asOwner(c, ownerA);
+        await c.query("SET CONSTRAINTS ALL IMMEDIATE");
+        expect((await insertAdjustment(c, 174_000)).rowCount).toBe(1);
+      });
+      await rawTx(async (c) => {
+        await asOwner(c, ownerA);
+        await c.query("SET CONSTRAINTS ALL IMMEDIATE");
+        await c.query("UPDATE income_adjustment SET deleted_at = now(), deleted_reason = 'x' WHERE id = $1", [adjustmentA]);
+        expect((await insertAdjustment(c, 175_000)).rowCount).toBe(1);
+      });
+    });
+
+    it("rejects restoring a deleted refund or lowering the income below its active refunds", async () => {
+      await expectCommitRejected(async (c) => {
+        await c.query("UPDATE income_adjustment SET deleted_at = now(), deleted_reason = 'x' WHERE id = $1", [adjustmentA]);
+        await insertAdjustment(c, 175_000);
+        await c.query("UPDATE income_adjustment SET deleted_at = NULL, deleted_reason = NULL WHERE id = $1", [adjustmentA]);
+      });
+      await expectCommitRejected((c) =>
+        c.query("UPDATE income_entry SET amount_minor = 999, tithe_minor = 100 WHERE id = $1", [incomeA]),
+      );
+    });
+  });
+
   it("the deferred trigger rejects allocations that exceed the payment at commit", async () => {
     const client = await getPool().connect();
     try {

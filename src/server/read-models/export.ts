@@ -37,8 +37,9 @@ export async function buildCsvExport(ctx: ServiceContext): Promise<CsvExport> {
 }
 
 /**
- * JSON backup: full history including soft-deleted and reversed records plus the audit trail; totals are computed
- * from the active records only. Read in one owner-scoped transaction so it is a consistent snapshot.
+ * JSON backup: full history including soft-deleted and reversed records plus the audit trail (with before/after
+ * snapshots); totals are computed from the active records only. Read in one owner-scoped transaction so it is a
+ * consistent snapshot.
  */
 export async function buildBackupExport(ctx: ServiceContext): Promise<BackupExport> {
   return withOwnerSnapshot(ctx.ownerId, async (tx) => {

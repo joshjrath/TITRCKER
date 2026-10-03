@@ -40,7 +40,7 @@ export function BalanceSurface({ vm }: { vm: OverviewVM }) {
             />
           </div>
         </div>
-        <div className="relative [grid-area:1/1/2/-1] desk:[grid-area:1/1/3/8]">
+        <div className="relative min-w-0 [grid-area:1/1/2/-1] desk:[grid-area:1/1/3/8]">
           {vm.isEmpty || !headline ? (
             <EmptyInvitation />
           ) : (
@@ -57,7 +57,7 @@ export function BalanceSurface({ vm }: { vm: OverviewVM }) {
             />
           )}
         </div>
-        <div className="relative desk:[grid-area:1/8/2/13]">
+        <div className="relative min-w-0 desk:[grid-area:1/8/2/13]">
           <YearEndBlock payout={vm.payout} currency={vm.currency} progress={payoutRange} />
         </div>
         <QuickEntryPanel className="relative hidden md:block desk:[grid-area:2/8/3/13]" />

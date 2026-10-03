@@ -26,6 +26,33 @@ describe("findProductionEnvProblems", () => {
     expect(JSON.stringify(problems)).not.toContain("short-secret");
   });
 
+  it.each([
+    ["BETTER_AUTH_URL", { BETTER_AUTH_URL: "http://tenth.example" }],
+    ["RENDER_EXTERNAL_URL", { BETTER_AUTH_URL: undefined, RENDER_EXTERNAL_URL: "http://tenth.onrender.com" }],
+    ["BETTER_AUTH_URL", { BETTER_AUTH_URL: "http://192.168.1.20:3000" }],
+  ])("rejects a plain-http public origin in production (%s)", (variable, overrides) => {
+    expect(findProductionEnvProblems({ ...good, ...overrides })).toEqual([
+      expect.objectContaining({ variable, severity: "error", problem: expect.stringContaining("https") }),
+    ]);
+  });
+
+  it.each(["http://localhost:3100", "http://127.0.0.1:3000", "http://[::1]:3000"])("allows plain http on loopback (%s)", (url) => {
+    expect(findProductionEnvProblems({ ...good, BETTER_AUTH_URL: url })).toEqual([]);
+  });
+
+  it("does not flag http outside production", () => {
+    expect(findProductionEnvProblems({ ...good, NODE_ENV: "development", BETTER_AUTH_URL: "http://tenth.example" })).toEqual([]);
+  });
+
+  it("makes test mode in production fatal unless the E2E opt-in is set", () => {
+    expect(findProductionEnvProblems({ ...good, TENTH_TEST_MODE: "1" })).toEqual([
+      expect.objectContaining({ variable: "TENTH_TEST_MODE", severity: "error" }),
+    ]);
+    expect(findProductionEnvProblems({ ...good, TENTH_TEST_MODE: "1", TENTH_ALLOW_TEST_MODE_IN_PRODUCTION: "1" })).toEqual([]);
+    expect(findProductionEnvProblems({ ...good, TENTH_ALLOW_TEST_MODE_IN_PRODUCTION: "1" })).toEqual([]);
+    expect(findProductionEnvProblems({ ...good, NODE_ENV: "test", TENTH_TEST_MODE: "1" })).toEqual([]);
+  });
+
   it("only warns about a short setup token", () => {
     expect(findProductionEnvProblems({ ...good, OWNER_SETUP_TOKEN: "abc" })).toEqual([
       expect.objectContaining({ variable: "OWNER_SETUP_TOKEN", severity: "warning" }),

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { formatMoney } from "@/domain";
 import { AmountInput, Button, CurrencyToggle, DateInput, Field, InlineAlert, cn } from "@/components/ui";
+import { useUnsavedChanges } from "@/components/app/unsaved-changes";
 import type { ActionResult } from "@/lib/action-result";
 import { incomeCreateSchema, incomeUpdateSchema, parseWith } from "@/lib/validation";
 import type { IncomeMutationResult, IncomeRowVM } from "@/lib/view-models";
@@ -86,16 +87,8 @@ export function IncomeForm({ mode, initial, defaults, onSaved, onDirtyChange, co
     onDirtyRef.current?.(dirty);
   }, [dirty]);
 
-  // Warn before a reload / tab close drops typed input.
-  useEffect(() => {
-    if (!dirty) return;
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [dirty]);
+  // Warn before an in-app link, sign out, a reload or a tab close drops typed input.
+  useUnsavedChanges(dirty);
 
   function update<K extends keyof IncomeFormValues>(field: K, value: IncomeFormValues[K]) {
     setValues((v) => ({ ...v, [field]: value }));

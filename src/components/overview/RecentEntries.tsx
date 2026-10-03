@@ -19,7 +19,7 @@ function SourceText({ row }: { row: IncomeRowVM }) {
 
 function SavedBadge({ show }: { show: boolean }) {
   return show ? (
-    <Badge tone="accent" className="ml-2 h-5 px-1.5">
+    <Badge tone="accent" className="ml-2 h-5 shrink-0 px-1.5">
       Saved
     </Badge>
   ) : null;
@@ -77,20 +77,32 @@ export function RecentEntries({ rows, className }: RecentEntriesProps) {
                     <td className="tabular whitespace-nowrap py-3 pl-6 pr-3 text-text-2">
                       <time dateTime={row.receivedOn}>{formatLocalDate(row.receivedOn)}</time>
                     </td>
-                    <td className="max-w-[16rem] px-3 py-3 text-text">
-                      <span className="truncate">
-                        <SourceText row={row} />
+                    {/* w-full + max-w-0: the source takes the remaining width and truncates to one line (the full text
+                        stays in the accessibility tree and the full ledger wraps it). */}
+                    <td className="w-full max-w-0 px-3 py-3 text-text">
+                      <span className="flex min-w-0 items-center">
+                        <span className="min-w-0 truncate" title={row.source ?? undefined}>
+                          <SourceText row={row} />
+                        </span>
+                        <SavedBadge show={hl !== ""} />
                       </span>
-                      <SavedBadge show={hl !== ""} />
                     </td>
-                    <td className="px-3 py-3 text-right">
+                    <td className="whitespace-nowrap px-3 py-3 text-right">
                       <Amount minor={row.amountMinor} currency={row.currency} size="sm" />
                       <RefundNote row={row} />
                     </td>
-                    <td className="px-3 py-3 text-right">
+                    <td className="whitespace-nowrap px-3 py-3 text-right">
                       <Amount minor={row.netTitheMinor} currency={row.currency} size="sm" tone="accent" />
                     </td>
-                    <td className="py-3 pl-3 pr-6 text-text-2">{row.category ?? <span className="text-text-3">—</span>}</td>
+                    <td className="py-3 pl-3 pr-6 text-text-2">
+                      {row.category ? (
+                        <span className="block max-w-[10rem] truncate" title={row.category}>
+                          {row.category}
+                        </span>
+                      ) : (
+                        <span className="text-text-3">—</span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}

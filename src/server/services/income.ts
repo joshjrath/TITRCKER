@@ -11,10 +11,10 @@ import {
   formatLocalDate,
   formatMoney,
   minLocalDate,
+  refundLimitMessage,
   sumMinor,
   toLocalDate,
   toMinor,
-  ZERO,
   type LocalDate,
 } from "@/domain";
 import {
@@ -328,10 +328,7 @@ export async function createAdjustment(
     const existing = (await activeAdjustmentsOf(m.tx, m.ownerId, income.id)).map(adjustmentRecordFromRow);
     const check = checkRefundAmount(income, existing, data.amount);
     if (!check.ok) {
-      const message =
-        check.refundableMinor === ZERO
-          ? "This entry has already been fully refunded."
-          : `You can refund at most ${formatMoney(check.refundableMinor, income.currency)} on this entry.`;
+      const message = refundLimitMessage(check.refundableMinor, income.currency);
       throw new ServiceError("limit_exceeded", message, { amount: message });
     }
 

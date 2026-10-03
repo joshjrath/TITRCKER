@@ -37,6 +37,10 @@ import { withOwner } from "@/server/db/with-owner";
 import { createTestUser, resetAppData } from "./helpers/db";
 import { key } from "./helpers/services";
 
+/** A browser download started from Tenth itself (or the address bar, with `site: "none"`). */
+const exportRequest = (site?: string) =>
+  new Request("http://localhost:3000/api/export", { headers: site ? { "sec-fetch-site": site } : {} });
+
 afterAll(closeDb);
 
 const savedEnv = { mode: process.env.TENTH_TEST_MODE, now: process.env.TENTH_TEST_NOW };
@@ -171,7 +175,7 @@ describe("route handlers", () => {
   it("export routes answer 401 without a session", async () => {
     mocks.getOwner.mockResolvedValue(null);
     for (const GET of [csvGET, backupGET]) {
-      const res = await GET();
+      const res = await GET(exportRequest("same-origin"));
       expect(res.status).toBe(401);
       expect(res.headers.get("cache-control")).toBe("private, no-store");
       expect(await res.json()).toMatchObject({ ok: false, code: "unauthorized" });
@@ -180,15 +184,34 @@ describe("route handlers", () => {
 
   it("export routes answer 429 when rate limited", async () => {
     mocks.checkRateLimit.mockResolvedValue({ ok: false, retryAfterSeconds: 120 });
-    const res = await csvGET();
+    const res = await csvGET(exportRequest("same-origin"));
     expect(res.status).toBe(429);
     expect(res.headers.get("retry-after")).toBe("120");
     expect(mocks.checkRateLimit).toHaveBeenCalledWith(`export:${owner}`, { max: 10, windowSeconds: 300 });
   });
 
+  it("export routes refuse downloads started by another site, before any rate limit", async () => {
+    for (const site of ["cross-site", "same-site"]) {
+      for (const GET of [csvGET, backupGET]) {
+        const res = await GET(exportRequest(site));
+        expect(res.status).toBe(403);
+        expect(res.headers.get("cache-control")).toBe("private, no-store");
+        expect(await res.json()).toMatchObject({ ok: false, code: "forbidden" });
+      }
+    }
+    expect(mocks.checkRateLimit).not.toHaveBeenCalled();
+  });
+
+  it("export routes allow same-origin, address-bar (none) and header-less requests", async () => {
+    for (const site of ["same-origin", "none", undefined]) {
+      expect((await csvGET(exportRequest(site))).status).toBe(200);
+      expect((await backupGET(exportRequest(site))).status).toBe(200);
+    }
+  });
+
   it("CSV export: attachment, BOM, private no-store, nosniff", async () => {
     await createIncomeAction({ idempotencyKey: key(), amount: "100.00", currency: "CAD", receivedOn: "2026-10-05" });
-    const res = await csvGET();
+    const res = await csvGET(exportRequest());
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe("text/csv; charset=utf-8");
     expect(res.headers.get("content-disposition")).toBe('attachment; filename="tenth-ledger-2026-10-10.csv"');
@@ -199,7 +222,7 @@ describe("route handlers", () => {
   });
 
   it("backup export: JSON attachment", async () => {
-    const res = await backupGET();
+    const res = await backupGET(exportRequest());
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe("application/json; charset=utf-8");
     expect(res.headers.get("content-disposition")).toBe('attachment; filename="tenth-backup-2026-10-10.json"');

@@ -6,6 +6,7 @@ import {
   type BucketPosition,
   type Currency,
   type LocalDate,
+  type PeriodKey,
   type PeriodSummary,
 } from "@/domain";
 import type { PeriodProgressVM } from "@/lib/view-models";
@@ -79,9 +80,22 @@ export function periodStatNotes(summary: PeriodSummary, bucket: BucketPosition |
   notes.income = incomeParts.join(" · ");
   if (summary.openingMinor > 0) notes.accrued = `Includes ${formatMoney(summary.openingMinor, c)} opening balance`;
   if (bucket && bucket.overCoveredMinor > 0) {
-    notes.given = `${formatMoney(bucket.overCoveredMinor, c)} beyond this period's tithe (after refunds) counts as credit`;
+    // With nothing allocated, the surplus comes from refunds alone (accrued below zero), not from payments.
+    if (bucket.allocatedMinor > 0) {
+      notes.given = `${formatMoney(bucket.overCoveredMinor, c)} beyond this period's tithe (after refunds) counts as credit`;
+    } else {
+      const credit = `Refunds brought this period below zero — ${formatMoney(bucket.overCoveredMinor, c)} counts as credit`;
+      notes.accrued = notes.accrued ? `${notes.accrued} · ${credit}` : credit;
+    }
   }
   return notes;
+}
+
+/** What the monthly breakdown's Given column counts, so its total reads the same as the period's "Given". */
+export function monthlyGivenNote(key: PeriodKey): string {
+  return key === "all"
+    ? "Given counts every payment, by the date it was made."
+    : "Given counts payments allocated to this period, by the date they were made — the same as Given above.";
 }
 
 /**

@@ -9,6 +9,8 @@ import {
   checkRefundAmount,
   computeTithe,
   netTithe,
+  refundEffect,
+  refundLimitMessage,
   remainingRefundable,
   sortAdjustments,
   titheBasisFor,
@@ -202,5 +204,60 @@ describe('refund deltas (ARCHITECTURE §3.4)', () => {
         },
       ),
     );
+  });
+});
+
+describe('refundEffect', () => {
+  const basis = titheBasisFor(m('249.99'));
+
+  it('a new refund lowers the tithe to tithe(net after), rounded half up on the remaining amount', () => {
+    // 249.99 - 0.05 = 249.94 -> 24.99 (24.994).
+    expect(refundEffect(basis, m(0), m('0.05'))).toEqual({
+      netAmountAfterMinor: m('249.94'),
+      netTitheAfterMinor: m('24.99'),
+      titheChangeMinor: -m('0.01'),
+    });
+    // 249.94 - 0.04 = 249.90 -> 24.99: no change.
+    expect(refundEffect(basis, m('0.05'), m('0.04')).titheChangeMinor).toBe(0);
+  });
+
+  it('a full refund reverses exactly the remaining tithe; removing a refund adds it back', () => {
+    expect(refundEffect(basis, m('0.05'), m('249.94'))).toEqual({ netAmountAfterMinor: 0, netTitheAfterMinor: 0, titheChangeMinor: -m('24.99') });
+    expect(refundEffect(basis, m('0.05'), -m('0.05') as Minor)).toEqual({
+      netAmountAfterMinor: m('249.99'),
+      netTitheAfterMinor: m('25.00'),
+      titheChangeMinor: m('0.01'),
+    });
+  });
+
+  it("uses the entry's own stored rate", () => {
+    expect(refundEffect({ ...basis, titheRateBps: 500 }, m(0), m('49.99')).netTitheAfterMinor).toBe(m('10.00'));
+  });
+
+  it('matches the telescoping deltas of the stored adjustments (property)', () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 1, max: MAX_AMOUNT_MINOR }), fc.double({ min: 0, max: 1, noNaN: true }), fc.double({ min: 0, max: 1, noNaN: true }), (amount, f1, f2) => {
+        const a = toMinor(amount);
+        const first = toMinor(Math.floor(amount * f1));
+        const second = toMinor(Math.floor((amount - first) * f2));
+        const entry = titheBasisFor(a);
+        const effect = refundEffect(entry, first, second);
+        expect(effect.netTitheAfterMinor).toBe(computeTithe(toMinor(amount - first - second)));
+        expect(effect.titheChangeMinor).toBe(computeTithe(toMinor(amount - first - second)) - computeTithe(toMinor(amount - first)));
+      }),
+      { numRuns: 300 },
+    );
+  });
+
+  it('refuses refunds beyond the received amount or below zero', () => {
+    expect(() => refundEffect(basis, m('200.00'), m('50.00'))).toThrow(RangeError);
+    expect(() => refundEffect(basis, m(0), -m('0.01') as Minor)).toThrow(RangeError);
+  });
+});
+
+describe('refundLimitMessage', () => {
+  it('explains the remaining refundable amount, or that nothing is left', () => {
+    expect(refundLimitMessage(m('250.00'), 'CAD')).toBe('You can refund at most CAD 250.00 on this entry.');
+    expect(refundLimitMessage(toMinor(0), 'USD')).toBe('This entry has already been fully refunded.');
   });
 });

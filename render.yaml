@@ -20,14 +20,15 @@ services:
       - key: DATABASE_URL
         fromDatabase:
           name: tenth-db
-          property: connectionString   # internal (private network) connection string
+          property: connectionString   # internal (private network) URL, without TLS (see README: Database connection)
       - key: BETTER_AUTH_SECRET
         generateValue: true
       - key: OWNER_EMAIL
         sync: false                    # you are prompted for this during Blueprint setup
       - key: OWNER_SETUP_TOKEN
         generateValue: true            # copy it from the dashboard to use the one-time /setup page
-      # BETTER_AUTH_URL defaults to Render's RENDER_EXTERNAL_URL. Set it explicitly if you add a custom domain.
+      # BETTER_AUTH_URL defaults to Render's RENDER_EXTERNAL_URL. Set it explicitly (https://) if you add a custom
+      # domain; the onrender.com address stays trusted automatically.
 
 databases:
   - name: tenth-db
@@ -35,4 +36,4 @@ databases:
     user: tenth_app
     plan: basic-256mb        # paid plans include backups / point-in-time recovery; free databases expire
     postgresMajorVersion: "16"
-    ipAllowList: []          # no public access; only services in your Render account can connect
+    ipAllowList: []          # no public access; only services in your Render account can connect (pg_dump: see README)

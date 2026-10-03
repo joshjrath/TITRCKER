@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { computeBalances } from './balances';
-import { backupFileName, buildBackup, isBackupV1Header, type BackupRecords } from './backup';
+import { backupFileName, buildBackup, isBackupV1Header, type BackupAuditEvent, type BackupRecords } from './backup';
 import { toLocalDate } from './dates';
 import { income, m, opening, payment, setAside, snapshot } from './testFixtures';
 
@@ -45,7 +45,18 @@ function fixture() {
     },
     records,
     balances: computeBalances(active, toLocalDate('2026-10-03')),
-    auditEvents: [{ id: 'ev-1', entityType: 'church_payment', entityId: reversed.id, action: 'reverse', reason: 'typo', createdAt: '2026-10-06T00:00:00.000Z' }],
+    auditEvents: [
+      {
+        id: 'ev-1',
+        entityType: 'church_payment',
+        entityId: reversed.id,
+        action: 'reverse',
+        reason: 'typo',
+        createdAt: '2026-10-06T00:00:00.000Z',
+        before: { reversedAt: null, allocations: [{ bucketYear: 2026, amountMinor: 5000 }] },
+        after: { reversedAt: '2026-10-06T00:00:00.000Z', allocations: [{ bucketYear: 2026, amountMinor: 5000 }] },
+      },
+    ] as BackupAuditEvent[],
   };
   return { input, active };
 }
@@ -82,6 +93,8 @@ describe('buildBackup', () => {
     input.records.incomes.push({ ...input.records.incomes[0]!, id: 'late' });
     input.settings.timeZone = 'UTC';
     input.auditEvents.push({ ...input.auditEvents[0]!, id: 'ev-2' });
+    const after = input.auditEvents[0]!.after as { allocations: { amountMinor: number }[] };
+    after.allocations[0]!.amountMinor = 1; // nested audit snapshots are copied, not aliased
     expect(JSON.stringify(backup)).toBe(snapshotOfBackup);
   });
 

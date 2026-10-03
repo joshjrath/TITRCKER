@@ -6,8 +6,8 @@ import { attachment, authorizeExport, exportFailed, PRIVATE_DOWNLOAD_HEADERS } f
 export const dynamic = "force-dynamic";
 
 /** GET /api/export/csv — full reconciliation CSV of the signed-in owner's ledger (UTF-8 with BOM for Excel). */
-export async function GET(): Promise<Response> {
-  const auth = await authorizeExport();
+export async function GET(request: Request): Promise<Response> {
+  const auth = await authorizeExport(request);
   if ("response" in auth) return auth.response;
   try {
     const { filename, body } = await buildCsvExport({ ownerId: auth.owner.ownerId, now: now() });

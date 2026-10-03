@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { formatMoney, type BucketPosition, type Currency, type Minor } from "@/domain";
 import { Amount } from "@/components/ui";
+import { overCoveredNote } from "./obligation-text";
 
 export interface OutstandingObligationsProps {
   currency: Currency;
@@ -52,8 +53,7 @@ export function OutstandingObligations({ currency, buckets, stillToGiveMinor, cr
       ) : null}
       {overCovered.map((bucket) => (
         <p key={bucket.year} className="text-xs text-text-3">
-          {bucket.year}: payments cover {formatMoney(bucket.overCoveredMinor, currency)} more than this period finally
-          owed (after refunds). That amount counts as credit.
+          {overCoveredNote(bucket, currency)}
         </p>
       ))}
     </section>

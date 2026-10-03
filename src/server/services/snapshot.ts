@@ -5,6 +5,7 @@ import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import type {
   BackupAuditEvent,
   BackupRecords,
+  JsonValue,
   LedgerSnapshot,
   LocalDate,
   TrackingSettings,
@@ -171,6 +172,8 @@ export async function loadFullHistory(tx: OwnerTx, ownerId: string): Promise<Ful
       action: auditEvent.action,
       reason: auditEvent.reason,
       createdAt: auditEvent.createdAt,
+      before: auditEvent.before,
+      after: auditEvent.after,
     })
     .from(auditEvent)
     .where(eq(auditEvent.ownerId, ownerId))
@@ -205,6 +208,11 @@ export async function loadFullHistory(tx: OwnerTx, ownerId: string): Promise<Ful
         deletedReason: r.deletedReason,
       })),
     },
-    auditEvents: audits.map((a) => ({ ...a, createdAt: iso(a.createdAt) })),
+    auditEvents: audits.map((a) => ({
+      ...a,
+      createdAt: iso(a.createdAt),
+      before: (a.before ?? null) as JsonValue | null,
+      after: (a.after ?? null) as JsonValue | null,
+    })),
   };
 }

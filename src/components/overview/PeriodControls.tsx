@@ -48,6 +48,16 @@ export function PeriodSelect({ options, value, currency, trackingStart }: Period
   );
 }
 
+/** The selected period as plain text, for when there is nothing to switch between yet (a new account). */
+export function PeriodLabel({ label }: { label: string }) {
+  return (
+    <p className="flex h-11 items-center rounded-control border border-line px-3 text-label font-medium text-text-2">
+      <span className="sr-only">Period: </span>
+      <span className="tabular">{label}</span>
+    </p>
+  );
+}
+
 export interface CurrencySwitchProps {
   value: Currency;
   period: string;

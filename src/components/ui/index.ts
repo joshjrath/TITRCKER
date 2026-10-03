@@ -25,3 +25,4 @@ export { Textarea, type TextareaProps } from "./Textarea";
 export { TextInput, type TextInputProps } from "./TextInput";
 export { ToastProvider, useToast, type ToastOptions, type ToastVariant, type Politeness } from "./Toast";
 export { VisuallyHidden, type VisuallyHiddenProps } from "./VisuallyHidden";
+export { keepMoneyTogether } from "./money-text";

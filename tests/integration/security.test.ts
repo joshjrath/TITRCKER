@@ -38,7 +38,7 @@ import { createSetAsideAction, deleteSetAsideAction } from "@/server/actions/set
 import { resetAuthForTests } from "@/server/auth/auth";
 import { createOwnerAccount } from "@/server/auth/owner";
 import { closeDb, getDb, getPool } from "@/server/db/client";
-import { incomeEntry, user } from "@/server/db/schema";
+import { incomeEntry, OWNER_TABLE_NAMES, user } from "@/server/db/schema";
 import { withOwner } from "@/server/db/with-owner";
 import { GLOBAL_AUTH_LIMITS } from "@/server/security/auth-brake";
 import { CLIENT_IP_HEADER } from "@/server/security/client-ip";
@@ -52,17 +52,7 @@ import { addIncome, balancesFor, pay } from "./helpers/ledger";
 import { ctxFor, key } from "./helpers/services";
 
 const BASE = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
-const OWNER_TABLES = [
-  "app_settings",
-  "income_entry",
-  "income_adjustment",
-  "opening_obligation",
-  "church_payment",
-  "payment_allocation",
-  "set_aside_entry",
-  "idempotency_record",
-  "audit_event",
-];
+const exportRequest = () => new Request(`${BASE}/api/export`, { headers: { "sec-fetch-site": "same-origin" } });
 
 const savedEnv = { mode: process.env.TENTH_TEST_MODE, now: process.env.TENTH_TEST_NOW, token: process.env.OWNER_SETUP_TOKEN };
 beforeAll(() => {
@@ -104,7 +94,7 @@ describe("database role and row-level security catalog", () => {
       WHERE c.relkind = 'r'
         AND EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'owner_id' AND NOT a.attisdropped)
       ORDER BY c.relname`);
-    expect(rows.map((r) => r.table).sort()).toEqual([...OWNER_TABLES].sort());
+    expect(rows.map((r) => r.table).sort()).toEqual([...OWNER_TABLE_NAMES].sort());
     for (const r of rows) {
       expect(r, r.table).toMatchObject({ enabled: true, forced: true });
       expect(r.policies, r.table).toBeGreaterThan(0);
@@ -231,8 +221,8 @@ describe("cross-account access through Server Actions and export routes", () => 
   });
 
   it("export routes for B contain none of A's ids or text", async () => {
-    const csv = await (await csvGET()).text();
-    const backup = await (await backupGET()).text();
+    const csv = await (await csvGET(exportRequest())).text();
+    const backup = await (await backupGET(exportRequest())).text();
     for (const body of [csv, backup]) {
       for (const secret of [incomeA, deletedIncomeA, adjustmentA, paymentA, setAsideA, openingA, "A-private-note", "A-label", "a@example.test"]) {
         expect(body).not.toContain(secret);
@@ -251,8 +241,8 @@ describe("cross-account access through Server Actions and export routes", () => 
       ok: false,
       code: "unauthorized",
     });
-    expect((await csvGET()).status).toBe(401);
-    expect((await backupGET()).status).toBe(401);
+    expect((await csvGET(exportRequest())).status).toBe(401);
+    expect((await backupGET(exportRequest())).status).toBe(401);
   });
 });
 

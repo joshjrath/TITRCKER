@@ -3,7 +3,7 @@ import { formatMoney, type BucketPosition, type PeriodSummary } from "@/domain";
 import { AddIncomeButton } from "@/components/app/AddIncomeButton";
 import { AnimatedAmount } from "@/components/motion";
 import { CombinedBreakdown, spokenCombined } from "@/components/fx";
-import { Badge, cn } from "@/components/ui";
+import { Badge, cn, keepMoneyTogether } from "@/components/ui";
 import type { CombinedTotalVM, CurrencyHeadlineVM } from "@/lib/view-models";
 import { balanceNotes, overviewHref, periodStatNotes } from "./overview-text";
 import { PeriodStat } from "./PeriodStat";
@@ -64,8 +64,11 @@ export function BalanceHero({
   const heroCurrency = showTotal ? "CAD" : c;
   return (
     <div className="flex h-full flex-col">
-      {/* Desktop: the hero sits under the orbit's sweep, centred in the space above the period figures. */}
-      <div className="desk:flex desk:flex-1 desk:flex-col desk:justify-center desk:pb-10 desk:pt-28">
+      {/*
+        Desktop: the hero sits at a fixed depth under the orbit's sweep and the period figures are pinned to the
+        bottom. It is not centred, so opening the quick entry's details (which grows the row) never moves the amount.
+      */}
+      <div className="desk:flex desk:flex-1 desk:flex-col desk:pb-10 desk:pt-48">
         <div className="flex items-center gap-2">
           <h2 id="still-to-give" className="text-[0.9375rem] font-medium text-text-2">
             {showTotal ? (
@@ -80,7 +83,7 @@ export function BalanceHero({
             10%<span className="sr-only"> tithe rate</span>
           </Badge>
         </div>
-        <p className="mt-3 flex items-baseline gap-2 md:mt-4" data-testid="still-to-give-amount">
+        <p className="@container mt-3 flex items-baseline gap-2 md:mt-4" data-testid="still-to-give-amount">
           {showTotal && combined.status === "combined" ? (
             <>
               <span aria-hidden="true" className="text-[2rem] font-light text-text-3 md:text-[3rem]">
@@ -100,7 +103,7 @@ export function BalanceHero({
           <ul className="mt-4 flex flex-col gap-1.5">
             {notes.map((n) => (
               <li key={n.key} className={cn("tabular text-label", n.tone === "positive" ? "text-positive" : "text-text-2")}>
-                {n.text}
+                {keepMoneyTogether(n.text)}
               </li>
             ))}
             {other && !usdActive ? (

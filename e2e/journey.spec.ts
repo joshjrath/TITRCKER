@@ -42,6 +42,8 @@ test("signed-in empty account shows the invitation, the 10% marker and the payou
   await expect(page.getByText(/nothing to give right now/i).first()).toBeVisible();
   await expect(page.getByText("10%").first()).toBeVisible();
   await expect(page.getByText("89 days until payout").first()).toBeVisible();
+  // The selected period stays visible even before anything is recorded.
+  await expect(page.locator("main header").first()).toContainText("Oct 3 – Dec 31, 2026");
 });
 
 test("adding income shows a live 10% preview and updates the balance after save", async () => {
@@ -89,6 +91,26 @@ test("deleting an entry asks for confirmation and removes its tithe", async () =
 test("records persist after a reload", async () => {
   await page.reload();
   await expect(hero(page)).toContainText("CAD 200.00");
+});
+
+test("leaving a half-filled form through the navigation asks first", async () => {
+  await page.goto("/");
+  const amount = quickEntry(page).getByLabel("Amount received");
+  await amount.fill("12.34");
+  const ledgerLink = page.getByRole("link", { name: "Ledger", exact: true }).filter({ visible: true }).first();
+  const prompts: string[] = [];
+  page.once("dialog", (dialog) => {
+    prompts.push(dialog.message());
+    void dialog.dismiss();
+  });
+  await ledgerLink.click();
+  await expect.poll(() => prompts).toEqual(["You have unsaved changes. Leave without saving?"]);
+  await expect(page).toHaveURL("/");
+  await expect(amount).toHaveValue("12.34");
+
+  page.once("dialog", (dialog) => void dialog.accept());
+  await ledgerLink.click();
+  await expect(page).toHaveURL("/ledger");
 });
 
 test("editing an entry keeps its tithe and updates the ledger", async () => {

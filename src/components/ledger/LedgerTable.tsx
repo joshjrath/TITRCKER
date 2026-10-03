@@ -81,8 +81,8 @@ export function LedgerTable({ rows, actions, highlightFor, sort, onSort, classNa
         <tr className="border-b border-line text-left text-xs">
           <SortHeader spec={DATE} sort={sort} onSort={onSort} className="w-[7.25rem] pl-5 pr-3 desk:w-[8.25rem]" />
           <SortHeader spec={SOURCE} sort={sort} onSort={onSort} className="px-3" />
-          <SortHeader spec={AMOUNT} sort={sort} onSort={onSort} align="right" className="w-[8.75rem] px-3 desk:w-[10.5rem]" />
-          <th scope="col" className="w-[7.75rem] px-3 py-1.5 text-right font-medium text-text-3 desk:w-[9.5rem]">
+          <SortHeader spec={AMOUNT} sort={sort} onSort={onSort} align="right" className="w-[10rem] px-3 desk:w-[10.5rem]" />
+          <th scope="col" className="w-[10rem] px-3 py-1.5 text-right font-medium text-text-3 desk:w-[10.5rem]">
             Tithe (10%)
           </th>
           {/* Below 1200px the category moves under the source; the column stays (zero width) so every row keeps 6 cells. */}

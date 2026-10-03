@@ -1,5 +1,5 @@
 import { formatLocalDate, formatMoney, type Currency } from "@/domain";
-import { Amount, Badge, EmptyState, cn } from "@/components/ui";
+import { Amount, Badge, EmptyState, cn, keepMoneyTogether } from "@/components/ui";
 import type { PaymentVM } from "@/lib/view-models";
 
 import { LongText } from "./LongText";
@@ -76,9 +76,11 @@ function PaymentItem({ payment }: { payment: PaymentVM }) {
         ) : null}
         {payment.linkedSetAsideMinor > 0 ? (
           <p className="text-label text-text-3">
-            {reversed
-              ? `The ${formatMoney(payment.linkedSetAsideMinor, payment.currency)} taken out of Set aside was put back.`
-              : `Taken out of Set aside: ${formatMoney(payment.linkedSetAsideMinor, payment.currency)}`}
+            {keepMoneyTogether(
+              reversed
+                ? `The ${formatMoney(payment.linkedSetAsideMinor, payment.currency)} taken out of Set aside was put back.`
+                : `Taken out of Set aside: ${formatMoney(payment.linkedSetAsideMinor, payment.currency)}`,
+            )}
           </p>
         ) : null}
       </div>
@@ -108,7 +110,7 @@ function AllocationSummary({ payment }: { payment: PaymentVM }) {
   return (
     <p className="tabular text-label text-text-2">
       <span className="text-text-3">Covers </span>
-      {parts.join(" · ")}
+      {keepMoneyTogether(parts.join(" · "))}
     </p>
   );
 }

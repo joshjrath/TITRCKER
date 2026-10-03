@@ -29,6 +29,13 @@
       "when": 1791013422800,
       "tag": "0003_exchange_rate",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791022127954,
+      "tag": "0004_refund_limit_trigger",
+      "breakpoints": true
     }
   ]
 }

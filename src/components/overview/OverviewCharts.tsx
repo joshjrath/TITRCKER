@@ -1,6 +1,7 @@
 import { formatLocalDate, type CumulativeSeries, type MonthRow } from "@/domain";
 import { CumulativeChart, MonthlyBreakdown } from "@/components/charts";
 import { cn } from "@/components/ui";
+import { monthlyGivenNote } from "./overview-text";
 
 export interface OverviewChartsProps {
   chart: CumulativeSeries;
@@ -27,7 +28,13 @@ export function OverviewCharts({ chart, monthly, today, payoutDate, className }:
         />
       </div>
       <div className={cn(panel, "desk:col-span-5")}>
-        <MonthlyBreakdown rows={monthly} currency={chart.currency} rangeLabel={chart.range.label} emptyMessage="No income in this period yet." />
+        <MonthlyBreakdown
+          rows={monthly}
+          currency={chart.currency}
+          rangeLabel={chart.range.label}
+          emptyMessage="No income in this period yet."
+          note={monthlyGivenNote(chart.range.key)}
+        />
       </div>
     </div>
   );

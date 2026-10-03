@@ -31,6 +31,18 @@ export interface AnimatedAmountProps {
  * animates on mount or under reduced motion. Assistive technology only ever gets the final value:
  * the animated digits are aria-hidden and a visually hidden copy holds the settled amount.
  */
+/**
+ * Hero figures with many digits shrink to fit the width of their container (or the viewport when there is no
+ * container) instead of being clipped: one class per length of the whole part ("1,000,000" is 9 characters).
+ */
+function heroFitClass(whole: string): string {
+  if (whole.length >= 12) return styles.fit12 ?? '';
+  if (whole.length >= 10) return styles.fit10 ?? '';
+  if (whole.length >= 9) return styles.fit9 ?? '';
+  if (whole.length >= 7) return styles.fit7 ?? '';
+  return '';
+}
+
 export function AnimatedAmount({
   minor: valueMinor,
   currency,
@@ -75,7 +87,7 @@ export function AnimatedAmount({
   const code = <span className={styles.code}>{currency}</span>;
 
   return (
-    <span className={[styles.amount, styles[size], className].filter(Boolean).join(' ')}>
+    <span className={[styles.amount, styles[size], size === 'hero' ? heroFitClass(final.whole) : '', className].filter(Boolean).join(' ')}>
       <span className={styles.srOnly}>
         {final.sign ? 'minus ' : ''}
         {formatMoney(toMinor(valueMinor), currency, { sign: 'never' })}

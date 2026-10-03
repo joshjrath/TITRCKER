@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { AddIncomeButton } from "@/components/app";
-import { BalanceSurface, CurrencySwitch, OverviewCharts, PeriodSelect, RecentEntries } from "@/components/overview";
+import { BalanceSurface, CurrencySwitch, OverviewCharts, PeriodLabel, PeriodSelect, RecentEntries } from "@/components/overview";
 import { PageHeader } from "@/components/shell";
 import { requireOwnerPage } from "@/server/auth/session";
 import { now } from "@/server/clock";
@@ -30,7 +30,9 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
       <PageHeader
         title="Overview"
         periodSlot={
-          vm.isEmpty ? undefined : (
+          vm.isEmpty ? (
+            <PeriodLabel label={vm.period.label} />
+          ) : (
             <PeriodSelect options={vm.periodOptions} value={periodKey} currency={vm.currency} trackingStart={vm.settings.trackingStart} />
           )
         }

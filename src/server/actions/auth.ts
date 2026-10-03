@@ -7,7 +7,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import type { ActionResult } from "@/lib/action-result";
-import { rateLimitedResult, unauthorizedResult, validationResult } from "@/server/auth/action-results";
+import { rateLimitedResult, unauthorizedResult, validationResult } from "./failures";
 import { getAuth } from "@/server/auth/auth";
 import { getOwnerSetupToken } from "@/server/auth/config";
 import { createOwnerAccount, ownerExists } from "@/server/auth/owner";

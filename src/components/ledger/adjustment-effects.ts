@@ -1,12 +1,13 @@
 import {
   AMOUNT_ERROR_MESSAGES,
   ROUNDING_POLICY,
-  addMinor,
-  computeTithe,
   formatMoney,
+  negMinor,
   parseAmount,
-  subMinor,
+  refundEffect,
+  refundLimitMessage,
   type Minor,
+  type RefundEffect,
 } from "@/domain";
 import type { AdjustmentVM, IncomeRowVM } from "@/lib/view-models";
 
@@ -28,15 +29,10 @@ export type RefundPreview =
       netTitheAfterMinor: Minor;
     };
 
-function titheOf(row: RowFacts, amountMinor: Minor): Minor {
-  return computeTithe(amountMinor, row.titheRateBps, ROUNDING_POLICY);
-}
-
-/** Message shown when nothing (or less than asked) is left to refund on an entry. */
-export function refundLimitMessage(row: RowFacts): string {
-  return row.refundableMinor <= 0
-    ? "This entry has already been fully refunded."
-    : `You can refund at most ${formatMoney(row.refundableMinor, row.currency)} on this entry.`;
+/** The domain refund effect for this entry (every entry is stored under the one fixed rounding policy). */
+function effectOf(row: RowFacts, amountDeltaMinor: Minor): RefundEffect {
+  const basis = { amountMinor: row.amountMinor, titheRateBps: row.titheRateBps, roundingPolicy: ROUNDING_POLICY };
+  return refundEffect(basis, row.refundedMinor, amountDeltaMinor);
 }
 
 /**
@@ -47,16 +43,8 @@ export function refundPreview(row: RowFacts, amountText: string): RefundPreview 
   if (amountText.trim() === "") return { status: "empty" };
   const parsed = parseAmount(amountText);
   if (!parsed.ok) return { status: "invalid", message: AMOUNT_ERROR_MESSAGES[parsed.error] };
-  if (parsed.minor > row.refundableMinor) return { status: "too_much", message: refundLimitMessage(row) };
-  const netAmountAfterMinor = subMinor(row.netAmountMinor, parsed.minor);
-  const netTitheAfterMinor = titheOf(row, netAmountAfterMinor);
-  return {
-    status: "ok",
-    amountMinor: parsed.minor,
-    titheChangeMinor: subMinor(netTitheAfterMinor, row.netTitheMinor),
-    netAmountAfterMinor,
-    netTitheAfterMinor,
-  };
+  if (parsed.minor > row.refundableMinor) return { status: "too_much", message: refundLimitMessage(row.refundableMinor, row.currency) };
+  return { status: "ok", amountMinor: parsed.minor, ...effectOf(row, parsed.minor) };
 }
 
 /** What removing one adjustment does: the entry's tithe goes back up by `titheChangeMinor` (>= 0). */
@@ -64,8 +52,8 @@ export function adjustmentRemovalEffect(
   row: RowFacts,
   adjustment: Pick<AdjustmentVM, "amountMinor">,
 ): { titheChangeMinor: Minor; netTitheAfterMinor: Minor } {
-  const netTitheAfterMinor = titheOf(row, addMinor(row.netAmountMinor, adjustment.amountMinor));
-  return { titheChangeMinor: subMinor(netTitheAfterMinor, row.netTitheMinor), netTitheAfterMinor };
+  const { titheChangeMinor, netTitheAfterMinor } = effectOf(row, negMinor(adjustment.amountMinor));
+  return { titheChangeMinor, netTitheAfterMinor };
 }
 
 /** The confirmation sentence for deleting an income entry, e.g. "This removes CAD 1,750.00 income and …". */

@@ -6,8 +6,8 @@ import { attachment, authorizeExport, exportFailed, PRIVATE_DOWNLOAD_HEADERS } f
 export const dynamic = "force-dynamic";
 
 /** GET /api/export/backup — JSON backup (full history incl. deleted/reversed records and the audit trail). */
-export async function GET(): Promise<Response> {
-  const auth = await authorizeExport();
+export async function GET(request: Request): Promise<Response> {
+  const auth = await authorizeExport(request);
   if ("response" in auth) return auth.response;
   try {
     const { filename, backup } = await buildBackupExport({ ownerId: auth.owner.ownerId, now: now() });

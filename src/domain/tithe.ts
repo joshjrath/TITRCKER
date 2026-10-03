@@ -16,9 +16,10 @@ import {
   TITHE_RATE_BPS,
   type RoundingPolicy,
 } from './constants';
+import type { Currency } from './constants';
 import type { LocalDate } from './dates';
 import { compareByDateCreatedId } from './ordering';
-import { sumMinor, subMinor, toMinor, type Minor } from './money';
+import { formatMoney, sumMinor, subMinor, toMinor, type Minor } from './money';
 
 /**
  * The tithe on one amount: `floor((amount * rateBps + 5000) / 10000)` in BigInt (half up per entry).
@@ -156,4 +157,45 @@ export function titheBasisFor(amountMinor: Minor): TitheBasis {
     roundingPolicy: ROUNDING_POLICY,
     titheMinor: computeTithe(amountMinor),
   };
+}
+
+/** What changing an entry's total refunds does to it (see {@link refundEffect}). */
+export interface RefundEffect {
+  /** Received amount minus all refunds after the change. */
+  netAmountAfterMinor: Minor;
+  /** `tithe(netAmountAfter)` under the entry's own stored rate and policy. */
+  netTitheAfterMinor: Minor;
+  /** `netTitheAfter − tithe(net before)`: <= 0 for a new refund, >= 0 when one is removed. */
+  titheChangeMinor: Minor;
+}
+
+/**
+ * The effect of changing an entry's refunds by `amountDeltaMinor` (positive: a new refund; negative: removing an
+ * existing one), given what was refunded so far. Because the net tithe is always `tithe(A − ΣR)` (§3.4), the result
+ * does not depend on how the refunds are dated or ordered. Uses the entry's stored rate and rounding policy.
+ * @throws RangeError when the refunds before or after the change are negative or exceed the received amount.
+ */
+export function refundEffect(
+  basis: Pick<TitheBasis, 'amountMinor' | 'titheRateBps' | 'roundingPolicy'>,
+  refundedSoFarMinor: Minor,
+  amountDeltaMinor: Minor,
+): RefundEffect {
+  const netBefore = subMinor(basis.amountMinor, refundedSoFarMinor);
+  const netAmountAfterMinor = subMinor(netBefore, amountDeltaMinor);
+  for (const net of [netBefore, netAmountAfterMinor]) {
+    if (net < 0 || net > basis.amountMinor) throw new RangeError('Refunds must stay between zero and the received amount');
+  }
+  const titheOf = (amount: Minor): Minor => computeTithe(amount, basis.titheRateBps, basis.roundingPolicy);
+  const netTitheAfterMinor = titheOf(netAmountAfterMinor);
+  return { netAmountAfterMinor, netTitheAfterMinor, titheChangeMinor: subMinor(netTitheAfterMinor, titheOf(netBefore)) };
+}
+
+/**
+ * The message for a refund above what is left on an entry (shared by the refund form and the server check):
+ * "This entry has already been fully refunded." or "You can refund at most CAD 250.00 on this entry."
+ */
+export function refundLimitMessage(refundableMinor: Minor, currency: Currency): string {
+  return refundableMinor <= 0
+    ? 'This entry has already been fully refunded.'
+    : `You can refund at most ${formatMoney(refundableMinor, currency)} on this entry.`;
 }

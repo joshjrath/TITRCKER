@@ -77,11 +77,3 @@ export async function checkRateLimit(key: string, rule: RateLimitRule): Promise<
   if (Number(row.count) <= rule.max) return { ok: true };
   return { ok: false, retryAfterSeconds: Number(row.retry_after) };
 }
-
-/** Deletes windows older than `olderThanSeconds` (housekeeping; safe to call any time). */
-export async function pruneRateLimits(olderThanSeconds = 24 * 60 * 60): Promise<number> {
-  const result = await getDb().execute(
-    sql`DELETE FROM app_rate_limit WHERE window_start < now() - make_interval(secs => ${olderThanSeconds})`,
-  );
-  return result.rowCount ?? 0;
-}

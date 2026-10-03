@@ -200,7 +200,7 @@ export function TrackingForm({ settings, today, earliestIncomeDate, timeZones }:
             disabled={pending}
             onChange={(displayCurrency) => change({ displayCurrency })}
           />
-          <p className="text-label text-text-3">Shown first on the Overview. CAD and USD are always kept separate.</p>
+          <p className="text-label text-text-3">Shown first on the Overview. CAD and USD balances stay separate; only the overall total is converted to CAD.</p>
         </div>
 
         <Field label="Church name" showOptional error={errors.churchName} hint="Filled in for you when you record a payment.">

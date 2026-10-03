@@ -190,7 +190,7 @@ describe('cumulativeSeries reconciles with balances (property)', () => {
 });
 
 describe('monthlyBreakdown reconciles with balances (property)', () => {
-  it('one row per month; rows sum to the bucket (minus pre-range openings) and to the payments in range', () => {
+  it('one row per month (plus before/after rows); rows sum to the bucket figures', () => {
     fc.assert(
       fc.property(ledgerArb, currencyArb, yearKeyArb, (snap, currency, year) => {
         const events = deriveObligationEvents(snap);
@@ -199,14 +199,22 @@ describe('monthlyBreakdown reconciles with balances (property)', () => {
         const bucket = computeBalances(snap, trackingStart, events)[currency].buckets.find((b) => b.year === year);
         const series = cumulativeSeries(snap, events, currency, range, range.end, year);
 
-        expect(rows.map((r) => r.monthKey)).toEqual(monthsInRange(range.start, range.end));
+        const months = rows.flatMap((r) => (r.kind === 'month' ? [r.monthKey] : []));
+        expect(months).toEqual(monthsInRange(range.start, range.end));
+        expect(rows.map((r) => r.kind)).toEqual([
+          ...(rows[0]?.kind === 'before' ? ['before'] : []),
+          ...months.map(() => 'month'),
+          ...(rows.at(-1)?.kind === 'after' ? ['after'] : []),
+        ]);
         const sum = (pick: (r: (typeof rows)[number]) => number): number => rows.reduce((s, r) => s + pick(r), 0);
-        expect(sum((r) => r.titheMinor) + series.startValueMinor).toBe(bucket?.accruedMinor ?? 0);
+        expect(sum((r) => r.titheMinor)).toBe(bucket?.accruedMinor ?? 0);
         expect(sum((r) => r.netIncomeMinor)).toBe(bucket?.netIncomeMinor ?? 0);
-        const paidInRange = snap.payments
-          .filter((p) => p.currency === currency && p.paidOn >= range.start && p.paidOn <= range.end)
-          .reduce((s, p) => s + p.amountMinor, 0);
-        expect(sum((r) => r.paidMinor)).toBe(paidInRange);
+        expect(sum((r) => r.paidMinor)).toBe(bucket?.allocatedMinor ?? 0);
+        // The carry-in row is exactly the chart's starting value and the given before the range.
+        const beforeRow = rows.find((r) => r.kind === 'before');
+        expect(beforeRow?.titheMinor ?? 0).toBe(series.startValueMinor);
+        expect(beforeRow?.paidMinor ?? 0).toBe(series.givenStartValueMinor);
+        expect(rows.find((r) => r.kind === 'after')?.paidMinor ?? 0).toBe(series.givenAfterRangeMinor);
       }),
       { numRuns: 300 },
     );

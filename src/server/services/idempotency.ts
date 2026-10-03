@@ -27,6 +27,30 @@ export function requestHash(operation: string, request: unknown): string {
   return createHash("sha256").update(operation).update("\n").update(canonicalJson(request)).digest("hex");
 }
 
+/**
+ * What `idempotency_record.response` holds: the operation's result wrapped, so a `null` result is distinguishable from
+ * "no response stored yet" and an `undefined` result (no `value` member) survives the JSON round trip.
+ * Rows written before the wrapper existed hold the bare result and are returned as they are.
+ */
+interface StoredResponse {
+  v: 1;
+  value?: unknown;
+}
+
+function wrapResponse(result: unknown): StoredResponse {
+  return JSON.parse(JSON.stringify({ v: 1, value: result })) as StoredResponse;
+}
+
+function isStoredResponse(stored: unknown): stored is StoredResponse {
+  if (typeof stored !== "object" || stored === null || Array.isArray(stored)) return false;
+  const keys = Object.keys(stored);
+  return (stored as { v?: unknown }).v === 1 && keys.every((k) => k === "v" || k === "value");
+}
+
+function unwrapResponse(stored: unknown): unknown {
+  return isStoredResponse(stored) ? stored.value : stored;
+}
+
 export interface IdempotentRequest {
   key: string;
   operation: string;
@@ -39,7 +63,8 @@ export interface IdempotentRequest {
  * writes, so a concurrent duplicate waits for the first transaction and then sees its stored response).
  *
  * - New key: runs `fn`, stores its (JSON-serializable) result as the response, returns it.
- * - Same key, same operation + request hash: returns the stored response without running `fn` again.
+ * - Same key, same operation + request hash: returns the stored response without running `fn` again (including a
+ *   `null` or `undefined` result).
  * - Same key, different payload or operation: throws `idempotency_conflict`.
  *
  * If `fn` throws, the whole transaction (including the key) rolls back, so a retry runs again.
@@ -75,13 +100,13 @@ export async function withIdempotency<T>(
     if (existing.response === null) {
       throw new ServiceError("conflict", "This request is still being processed. Please try again in a moment.");
     }
-    return existing.response as T;
+    return unwrapResponse(existing.response) as T;
   }
 
   const result = await fn();
   await tx
     .update(idempotencyRecord)
-    .set({ response: JSON.parse(JSON.stringify(result ?? null)) as unknown })
+    .set({ response: wrapResponse(result) })
     .where(and(eq(idempotencyRecord.ownerId, ownerId), eq(idempotencyRecord.key, req.key)));
   return result;
 }

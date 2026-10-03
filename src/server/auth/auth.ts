@@ -21,13 +21,16 @@ import {
 import { ownerExists } from "./owner-exists";
 import {
   AUTH_COOKIE_PREFIX,
+  AUTH_RATE_LIMITS,
+  BACKUP_CODE_COUNT,
+  BACKUP_CODE_LENGTH,
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
   SESSION_EXPIRES_IN_SECONDS,
   SESSION_FRESH_AGE_SECONDS,
   SESSION_UPDATE_AGE_SECONDS,
   TOTP_ISSUER,
-  TRUST_DEVICE_DAYS,
+  TRUST_DEVICE_MAX_AGE_SECONDS,
 } from "./policy";
 
 /** Error codes thrown by the owner-only database hook (surfaced by createOwnerAccount). */
@@ -89,18 +92,14 @@ function createAuth() {
     rateLimit: {
       enabled: true,
       storage: "database",
-      window: 60,
-      max: 60,
+      ...AUTH_RATE_LIMITS.default,
       customRules: {
-        // Credential checks: 5 per minute per client IP.
-        "/sign-in/email": { window: 60, max: 5 },
-        // Second factor during sign-in: 5 per 5 minutes per IP (the plugin also locks the account after 10 misses).
-        "/two-factor/verify-totp": { window: 300, max: 5 },
-        "/two-factor/verify-backup-code": { window: 300, max: 5 },
-        "/two-factor/*": { window: 60, max: 10 },
-        "/change-password": { window: 300, max: 5 },
-        // Session reads are cheap and frequent.
-        "/get-session": { window: 60, max: 120 },
+        "/sign-in/email": AUTH_RATE_LIMITS.signIn,
+        "/two-factor/verify-totp": AUTH_RATE_LIMITS.secondFactor,
+        "/two-factor/verify-backup-code": AUTH_RATE_LIMITS.secondFactor,
+        "/two-factor/*": AUTH_RATE_LIMITS.twoFactor,
+        "/change-password": AUTH_RATE_LIMITS.changePassword,
+        "/get-session": AUTH_RATE_LIMITS.getSession,
       },
     },
     advanced: {
@@ -129,8 +128,8 @@ function createAuth() {
     plugins: [
       twoFactor({
         issuer: TOTP_ISSUER,
-        trustDeviceMaxAge: TRUST_DEVICE_DAYS * 24 * 60 * 60,
-        backupCodeOptions: { amount: 10, length: 10, storeBackupCodes: "encrypted" },
+        trustDeviceMaxAge: TRUST_DEVICE_MAX_AGE_SECONDS,
+        backupCodeOptions: { amount: BACKUP_CODE_COUNT, length: BACKUP_CODE_LENGTH, storeBackupCodes: "encrypted" },
       }),
       // Must stay last: copies Set-Cookie from auth.api calls in Server Actions onto the Next.js response.
       nextCookies(),

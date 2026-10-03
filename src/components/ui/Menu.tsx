@@ -165,7 +165,7 @@ export function Menu({ label, items, trigger, align = "end", placement = "bottom
           tabIndex={-1}
           onKeyDown={onMenuKeyDown}
           className={cn(
-            "absolute z-50 min-w-48 animate-reveal rounded-control border border-line-strong bg-surface-raised p-1 shadow-menu",
+            "absolute z-50 w-max min-w-48 max-w-[min(20rem,calc(100vw-2rem))] animate-reveal rounded-control border border-line-strong bg-surface-raised p-1 shadow-menu",
             align === "end" ? "right-0" : "left-0",
             placement === "bottom" ? "top-full mt-1.5" : "bottom-full mb-1.5",
           )}
