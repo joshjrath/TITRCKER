@@ -13,11 +13,12 @@
     "test:all": "vitest run",
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx scripts/migrate.ts",
+    "db:migrate": "node scripts/migrate.mjs",
     "db:doctor": "tsx scripts/db-doctor.ts",
     "owner:create": "tsx scripts/create-owner.ts",
     "demo:seed": "tsx scripts/seed-demo.ts",
-    "check": "npm run typecheck && npm run lint && npm run test && npm run test:integration"
+    "check": "npm run typecheck && npm run lint && npm run test && npm run test:integration",
+    "start:render": "node scripts/migrate.mjs && next start"
   },
   "dependencies": {
     "better-auth": "^1.7.7",
