@@ -18,19 +18,24 @@ export interface FxProvider {
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
 
-/** Bank of Canada Valet: `{ observations: [{ d: "2026-10-02", FXUSDCAD: { v: "1.3712" } }] }` (latest last). */
+/**
+ * Bank of Canada Valet: `{ observations: [{ d: "2026-10-02", FXUSDCAD: { v: "1.3712" } }, …] }`.
+ * Picks the NEWEST valid observation by date, whatever order the API lists them in (`recent=N` can come newest
+ * first; picking by position once returned the oldest of the batch).
+ */
 export function parseBankOfCanada(body: unknown): ProviderRate | null {
   if (!isRecord(body) || !Array.isArray(body.observations)) return null;
-  for (let i = body.observations.length - 1; i >= 0; i -= 1) {
-    const observation: unknown = body.observations[i];
+  let newest: ProviderRate | null = null;
+  for (const observation of body.observations as unknown[]) {
     if (!isRecord(observation) || typeof observation.d !== "string") continue;
     const series = observation.FXUSDCAD;
     if (!isRecord(series) || typeof series.v !== "string") continue;
     const observedOn = parseLocalDate(observation.d);
     const rate = series.v.trim();
-    if (observedOn && parseFxRate(rate)) return { rate, observedOn, source: "bank_of_canada" };
+    if (!observedOn || !parseFxRate(rate)) continue;
+    if (!newest || observedOn > newest.observedOn) newest = { rate, observedOn, source: "bank_of_canada" };
   }
-  return null;
+  return newest;
 }
 
 /** Frankfurter (ECB): `{ base: "USD", date: "2026-10-02", rates: { CAD: 1.3712 } }`. */

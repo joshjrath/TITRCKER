@@ -131,7 +131,10 @@ export async function getUsdCadRate(now: Date, deps: RateDeps = {}): Promise<FxR
   if (fixture) return fixture;
   try {
     const cached = await latestCached();
-    if (cached && now.getTime() - cached.fetchedAt.getTime() < FX_REFRESH_AFTER_MS) return toFxRate(cached, now);
+    // Reuse a recent fetch, unless its observation is out of date (then look for a newer published rate).
+    if (cached && now.getTime() - cached.fetchedAt.getTime() < FX_REFRESH_AFTER_MS && !toFxRate(cached, now).stale) {
+      return toFxRate(cached, now);
+    }
     const recentlyFailed = lastFailureAt !== null && now.getTime() - lastFailureAt < FX_RETRY_AFTER_FAILURE_MS;
     if (cached) {
       if (!recentlyFailed) void startRefresh(now, deps);

@@ -73,6 +73,17 @@ describe("getUsdCadRate", () => {
     await expect(getUsdCadRate(later, { fetchImpl: next.impl })).resolves.toMatchObject({ rate: "1.3650", observedOn: "2026-10-05" });
   });
 
+  it("looks for a newer rate when the stored one is out of date, even if it was fetched recently", async () => {
+    // A batch fetched today whose newest observation is 8 days old (e.g. picked from the wrong end of the list).
+    await getUsdCadRate(NOW, { fetchImpl: fakeFetch({ [BOC]: () => new Response(bocBody("1.4145", "2026-09-25")) }).impl });
+    const newer = fakeFetch({ [BOC]: () => new Response(bocBody("1.4101", "2026-10-01")) });
+    const soon = new Date(NOW.getTime() + 60_000);
+    await expect(getUsdCadRate(soon, { fetchImpl: newer.impl })).resolves.toMatchObject({ rate: "1.4145", stale: true });
+    await pendingFxRefresh();
+    expect(newer.calls).toHaveLength(1);
+    await expect(getUsdCadRate(soon, { fetchImpl: newer.impl })).resolves.toMatchObject({ rate: "1.4101", stale: false });
+  });
+
   it("does not ask the providers again for a while after they all failed", async () => {
     const down = fakeFetch({});
     await expect(getUsdCadRate(NOW, { fetchImpl: down.impl })).resolves.toBeNull();

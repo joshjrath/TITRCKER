@@ -16,6 +16,19 @@ describe("parseBankOfCanada", () => {
     expect(parseBankOfCanada(body)).toEqual({ rate: "1.3712", observedOn: "2026-10-02", source: "bank_of_canada" });
   });
 
+  it("picks the newest observation even when the API lists newest first", () => {
+    const body = {
+      observations: [
+        { d: "2026-10-01", FXUSDCAD: { v: "1.4101" } },
+        { d: "2026-09-30", FXUSDCAD: { v: "1.4120" } },
+        { d: "2026-09-29", FXUSDCAD: { v: "1.4133" } },
+        { d: "2026-09-26", FXUSDCAD: { v: "1.4140" } },
+        { d: "2026-09-25", FXUSDCAD: { v: "1.4145" } },
+      ],
+    };
+    expect(parseBankOfCanada(body)).toEqual({ rate: "1.4101", observedOn: "2026-10-01", source: "bank_of_canada" });
+  });
+
   it("skips malformed trailing observations", () => {
     const body = {
       observations: [
