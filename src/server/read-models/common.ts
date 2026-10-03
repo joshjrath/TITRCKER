@@ -87,11 +87,16 @@ export function incomeRowVM(row: LedgerRow): IncomeRowVM {
 
 /** Distinct categories of active income (case-insensitively de-duplicated, sorted) for suggestions. */
 export function categoriesOf(snapshot: LedgerSnapshot): string[] {
+  return distinctCategories(snapshot.incomes.map((income) => income.category));
+}
+
+/** Case-insensitively de-duplicated, sorted category names (nulls skipped; the first spelling wins). */
+export function distinctCategories(values: Iterable<string | null>): string[] {
   const byKey = new Map<string, string>();
-  for (const income of snapshot.incomes) {
-    if (income.category === null) continue;
-    const k = income.category.toLowerCase();
-    if (!byKey.has(k)) byKey.set(k, income.category);
+  for (const category of values) {
+    if (category === null) continue;
+    const k = category.toLowerCase();
+    if (!byKey.has(k)) byKey.set(k, category);
   }
   return [...byKey.values()].sort((a, b) => compareStrings(a.toLowerCase(), b.toLowerCase()));
 }

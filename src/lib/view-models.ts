@@ -114,6 +114,18 @@ export interface OverviewVM {
   isEmpty: boolean;
 }
 
+/** Defaults for the income entry form, loaded once by the (app) layout. */
+export interface EntryDefaultsVM {
+  /** Today in the owner's time zone (default and max for the date received). */
+  today: LocalDate;
+  /** The currency of the last saved entry (CAD for a new account). */
+  currency: Currency;
+  /** Earliest allowed date received. */
+  trackingStart: LocalDate;
+  /** Distinct previous categories, for suggestions. */
+  categories: string[];
+}
+
 export interface LedgerVM {
   today: LocalDate;
   timeZone: string;
