@@ -16,7 +16,7 @@
     "db:migrate": "node scripts/migrate.mjs",
     "db:doctor": "tsx scripts/db-doctor.ts",
     "owner:create": "tsx --conditions=react-server scripts/create-owner.ts",
-    "demo:seed": "tsx scripts/seed-demo.ts",
+    "demo:seed": "tsx --conditions=react-server scripts/seed-demo.ts",
     "check": "npm run typecheck && npm run lint && npm run test && npm run test:integration",
     "start:render": "node scripts/migrate.mjs && next start"
   },
