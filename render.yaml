@@ -7,7 +7,7 @@ services:
     runtime: node
     plan: starter            # any paid plan avoids cold starts; "free" also works but sleeps when idle
     region: oregon           # keep the web service and database in the same region
-    buildCommand: npm ci && npm run build
+    buildCommand: npm ci --include=dev && npm run build   # build tools (TypeScript, Tailwind) are devDependencies
     # Migrations run before the server starts (safe to repeat; guarded by an advisory lock).
     startCommand: npm run start:render
     healthCheckPath: /api/health
